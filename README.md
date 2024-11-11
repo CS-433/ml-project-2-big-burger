@@ -10,15 +10,19 @@ The goal of this project is to train a deep learning model to predict the diffus
 
 ## Simulation
 ### Parameters:
-Image size: Nx * Ny * Nt
-Nx = Ny = 100nm
-Nt: number of frames 10
-Interframe positions: 10
-The mollecule always starts in the center of the first frame. 
-delta_t: Time between two frames: 10 ms
-Generate images for a chosen D in [10^-1, 10] (micro_meter)^2/second
-Microscope FWHM (Full width half maximum): 100nm (later push up to 250nm)
-Flux: 10 photons/ms
-Amplitude of diraqs: Flux * delta_t /Interframe positions
-
+Image size: Nx * Ny * Nt  
+Nx = Ny = 100  
+Nt: number of frames 10  
+Interframe positions: 10  
+The mollecule always starts in the center of the first frame.   
+delta_t: Time between two frames: 10 ms  
+Generate images for a chosen D in [10^-1, 10] (micro_meter)^2/second  
+Microscope FWHM (Full width half maximum): 100nm (later push up to 250nm)  
+Flux: 10 photons/ms  
+Amplitude of diraqs: Flux * delta_t /Interframe positions  
 PSF (Point Spread function): start with Gaussian, then use specified one 
+
+
+
+### Output Images:  
+![alt text](image.png)
