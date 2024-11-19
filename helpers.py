@@ -402,3 +402,58 @@ def generateImagesAndEstimateD(
 
 
 
+def save_image(image, filename):
+    """
+    Save a single image to a .npy file.
+    
+    Parameters:
+    - image: A numpy array of shape (8, 64, 64) and dtype np.float16.
+    - filename: The filename (including path) to save the image, ending with .npy.
+    """
+    if image.shape != (8, 64, 64):
+        raise ValueError("Image must have shape (8, 64, 64)")
+
+    # Save the image as a .npy file
+    np.save(filename, image)
+    print(f"Image saved to {filename}")
+
+def load_image(filename):
+    """
+    Load an image from a .npy file.
+    
+    Parameters:
+    - filename: The filename (including path) of the .npy file.
+    
+    Returns:
+    - A numpy array of shape (8, 64, 64) and dtype np.float16.
+    """
+    image = np.load(filename)
+    print(f"Image loaded from {filename}")
+    return image
+
+import matplotlib.pyplot as plt
+
+def plot_image_frames(image, title="Image Frames"):
+    """
+    Plot all 8 frames of an image in a 2x4 grid.
+    
+    Parameters:
+    - image: A numpy array of shape (8, 64, 64).
+    - title: Title for the entire plot (optional).
+    """
+    if image.shape != (8, 64, 64):
+        raise ValueError("Image must have shape (8, 64, 64)")
+
+    # Create a 2x4 grid for plotting
+    fig, axes = plt.subplots(2, 4, figsize=(12, 6))
+    fig.suptitle(title, fontsize=16)
+    
+    # Plot each frame
+    for i in range(8):
+        ax = axes[i // 4, i % 4]  # Determine subplot position
+        ax.imshow(image[i], cmap="gray",vmin=0,vmax=1, interpolation="nearest")
+        ax.set_title(f"Frame {i+1}")
+        ax.axis("off")  # Hide axes for better visualization
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to include the title
+    plt.show()
