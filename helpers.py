@@ -137,7 +137,7 @@ def gaussian_2d(xc, yc, sigma, grid_size, amplitude=1.0):
     return gauss
 
 
-def add_noise_background(image, background, poisson_noise, gaussian_noise):
+def add_noise_background(image, background, poisson_noise, gaussian_noise, normalizeValue=-1):
     """
     Adds background intensity and noise to an image, simulating microscopy imaging noise.
 
@@ -160,7 +160,9 @@ def add_noise_background(image, background, poisson_noise, gaussian_noise):
     
     # Apply Poisson noise (scaling by poisson_noise factor)
     noisy = maxi * poisson_noise * random_noise(image_normalized / poisson_noise, mode='poisson')
-    return noisy.astype(np.uint16)
+    if (normalizeValue != -1):
+        noisy = noisy / normalizeValue
+    return noisy.astype(np.float16 if normalizeValue != -1 else np.uint16)
 
 
 def plot1ParticleTrajectory(trajectory, nframes, D):
@@ -332,7 +334,7 @@ def generateAndPlotMultipleDiffusionSequences(diffusion_coefficients,  nframes, 
 
 def generateImagesAndEstimateD(
     nparticles, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
-    flux, background, poisson_noise, gaussian_noise):
+    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1):
     """
     Generates the full pipeline of images and estimates the diffusion coefficient (D) for each particle.
 
@@ -387,7 +389,7 @@ def generateImagesAndEstimateD(
 
             # Downsample and add noise
             frame_lr = block_reduce(frame_hr[k], block_size=factor_hr, func=np.mean)
-            frame_noisy[k] = add_noise_background(frame_lr, background, poisson_noise, gaussian_noise)
+            frame_noisy[k] = add_noise_background(frame_lr, background, poisson_noise, gaussian_noise, normalizeValue)
             
         # Store the noisy images
         image_array[p] = frame_noisy
