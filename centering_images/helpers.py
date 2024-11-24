@@ -334,7 +334,7 @@ def generateAndPlotMultipleDiffusionSequences(diffusion_coefficients,  nframes, 
 
 def generateImagesAndEstimateD(
     nparticles, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
-    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1):
+    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1, centering=False):
     """
     Generates the full pipeline of images and estimates the diffusion coefficient (D) for each particle.
 
@@ -369,6 +369,11 @@ def generateImagesAndEstimateD(
     for p in range(nparticles):
         # Generate images for this particle
         trajectory = trajectories[p]
+
+        # substracts the last trajectory to current one
+        if centering:
+            trajectory[1:] -= trajectory[:-1]
+
         frame_hr = np.zeros((nframes, npixel * factor_hr, npixel * factor_hr))
         frame_noisy = np.zeros((nframes, npixel, npixel))
 
