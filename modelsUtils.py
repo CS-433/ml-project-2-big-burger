@@ -32,7 +32,8 @@ def train_model(model, images, Ds,device, epochs=20, batch_size=32, learning_rat
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     loss_history = []
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
+
     
     # Training loop
     for epoch in range(epochs):
