@@ -14,7 +14,7 @@ class PaperCnn(nn.Module):
     def __init__(self):
         super(PaperCnn, self).__init__()
         self.layers = nn.Sequential(
-            # Input: (N, 8, 64, 64)
+            # Input: (N, 8, 64, 64) after temporal dimension adjustment
             nn.Conv2d(8, 16, kernel_size=3, padding='same'),  # (N, 16, 64, 64)
             nn.BatchNorm2d(16),
             Swish(),
@@ -40,10 +40,12 @@ class PaperCnn(nn.Module):
             nn.Linear(128, 1),  # Single output for regression
         )
 
-
-
     def forward(self, x):
+        # Input: (N, 8, 1, 64, 64)
+        x = x.squeeze(2)  # Remove the singleton channel dimension (N, 8, 64, 64)
         return self.layers(x)
+
+
 
 
 
@@ -125,67 +127,3 @@ def train_model_with_validation(model, images, Ds,  device, epochs=60, batch_siz
         print(f"Epoch {epoch + 1}/{epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
     
     return model, history
-
-def save_model_weights(model, path):
-    """
-    Save the model weights to a file.
-    
-    Parameters:
-    - model: The CNN model.
-    - path: Path to save the model weights.
-    """
-    torch.save(model.state_dict(), path)
-    print(f"Model weights saved to {path}")
-
-# Function to load model weights
-def load_model_weights(model, path):
-    """
-    Load model weights from a file.
-    
-    Parameters:
-    - model: The CNN model.
-    - path: Path to the saved model weights.
-    """
-    model.load_state_dict(torch.load(path,weights_only=True))
-    model.eval()  # Set the model to evaluation mode
-    print(f"Model weights loaded from {path}")
-    return model
-
-
-def predict_diffusion_coefficients(model, images, device):
-    """
-    Predict the diffusion coefficient D for one or multiple images.
-
-    Parameters:
-    - model: The trained model.
-    - images: A numpy array or tensor of shape (8, 64, 64) for a single image 
-              or (N, 8, 64, 64) for multiple images.
-    - device: The device (CPU or GPU) where the model is located.
-
-    Returns:
-    - predicted_Ds: A list of predicted diffusion coefficients.
-    """
-    # Ensure the images are a PyTorch tensor
-    if isinstance(images, np.ndarray):
-        images = torch.tensor(images, dtype=torch.float32)
-    
-    # If the input is a single image, add the batch dimension
-    if images.ndim == 3:  # Single image case
-        images = images.unsqueeze(0)  # (8, 64, 64) -> (1, 8, 64, 64)
-    
-    # Add the channel dimension: (N, 8, 64, 64) -> (N, 8, 1, 64, 64)
-    images = images.unsqueeze(2)
-    
-    # Move the images to the same device as the model
-    images = images.to(device)
-    
-    # Set the model to evaluation mode
-    model.eval()
-    
-    # Disable gradient computation for inference
-    with torch.no_grad():
-        # Get predictions
-        predicted_Ds = model(images)
-    
-    # Return the predictions as a list
-    return predicted_Ds.squeeze().tolist()
