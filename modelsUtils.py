@@ -75,7 +75,10 @@ def save_model_weights(model, path):
     - model: The CNN model.
     - path: Path to save the model weights.
     """
-    torch.save(model.state_dict(), path)
+    state_dict = model.state_dict()
+    for k, v in state_dict.items():
+        state_dict[k] = v.cpu()
+    torch.save(state_dict, path)
     print(f"Model weights saved to {path}")
 
 # Function to load model weights
