@@ -5,10 +5,11 @@ import sys
 sys.path.append('.')
 from helpers import *
 from tqdm import tqdm
+from os import path, makedirs
 
 def generateImagesAndEstimateD(
     nparticles, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
-    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1):
+    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1, save_dir=None):
     """
     Generates the full pipeline of images and estimates the diffusion coefficient (D) for each particle.
 
@@ -26,6 +27,7 @@ def generateImagesAndEstimateD(
     - background (float): Background intensity level.
     - poisson_noise (float): Poisson noise scaling factor.
     - gaussian_noise (float): Gaussian noise standard deviation.
+    - save_dir (str): Directory to save the images and D estimates.
 
     Returns:
     - image_array (ndarray): Array of shape (nparticles, nframes, npixel, npixel)
@@ -45,7 +47,7 @@ def generateImagesAndEstimateD(
     
 
     cpu_count = mp.cpu_count()
-    print(f"running programm on each {cpu_count} cpu core of the computer")
+    print(f"running program on each {cpu_count} cpu core of the computer")
     # Multiprocessing
     with mp.Pool(cpu_count) as pool:
         results = list(tqdm(
@@ -57,6 +59,16 @@ def generateImagesAndEstimateD(
     for p, (frame_noisy, D_estimate) in enumerate(results):
         image_array[p] = frame_noisy
         D_estimates[p] = D_estimate
+
+    if save_dir is not None:
+
+        if not path.isdir(save_dir):
+            makedirs(save_dir)
+            print(f"Directory {save_dir} didn't exist, it has now been created")
+
+        np.save(path.join(save_dir,"images.npy"), image_array)
+        np.save(path.join(save_dir,"D_estimates.npy"), D_estimates)
+        print(f"Images and D estimates saved in {save_dir}")
     
     return image_array, D_estimates
 
@@ -102,7 +114,7 @@ def generateImageforParticle(arg):
 
 if __name__ == "__main__":
     # Parameters
-    nparticles = 100
+    nparticles = 10
     nframes = 100
     npixel = 100
     factor_hr = 5
@@ -120,7 +132,7 @@ if __name__ == "__main__":
     start = time.time()
     image_array, D_estimates = generateImagesAndEstimateD(
         nparticles, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
-        flux, background, poisson_noise, gaussian_noise
+        flux, background, poisson_noise, gaussian_noise, save_dir="multiprocessing/results"
     )
     end = time.time()
     print("Time elapsed:", end - start)
