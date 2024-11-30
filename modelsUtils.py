@@ -6,7 +6,7 @@ import numpy as np
 
 
 # Training function
-def train_model(model, images, Ds,device, epochs=20, batch_size=32, learning_rate=0.001):
+def train_model(model, images, Ds,device, criterion, optimizer, epochs=1, batch_size=32):
     """
     Train the model to predict diffusion coefficient D.
     
@@ -27,9 +27,7 @@ def train_model(model, images, Ds,device, epochs=20, batch_size=32, learning_rat
     dataset = TensorDataset(images, Ds)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     
-    # Loss and optimizer
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
     
     loss_history = []
     device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
@@ -132,5 +130,5 @@ def predict_diffusion_coefficients(model, images, device):
         predicted_Ds = model(images)
     
     # Return the predictions as a list
-    return predicted_Ds.squeeze().tolist()
+    return predicted_Ds.squeeze()
 
