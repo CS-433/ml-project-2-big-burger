@@ -17,3 +17,24 @@ Faire de la Verification:
 - Centering et entrainer un modèle plus petit 
 - Diminuer bruit, diminuer pixel size, diminuer background 
 - run multicore, optimizer code génération
+
+
+
+## 6/12:
+
+- Exclure les D trop grands (particule qui sort): Out FOV
+- Plot le D frame-to-frame sur (coarse  D)
+- Pour utiliser la vraie data, entrainer nouveaux modeles avec en input 64x64x16
+
+Réflexions par rapport à l'architecture du papier, comparer avec la notre
+Beaucoup de 
+
+Quest-ce qui est appris par le modèle (shape ou total displacement ou intensité des peaks) ?
+
+
+Architectures:
+Augmeneter la taille du Resnet -> conv2D vs conv3D
+Tester architectures papers différentes
+
+Metrics: 
+R^2, % error, Mean, pearson corr
