@@ -572,7 +572,7 @@ def generateImagesAndEstimateDFAST(
     # Multiprocessing
     with mp.Pool(cpu_count) as pool:
         results = list(tqdm(
-                pool.imap(generateImageforParticle, args),
+                pool.imap(_generateImageforParticle, args),
                 total=nparticles,
                 desc="Generating images and estimating D"
                 ))    
@@ -594,7 +594,7 @@ def generateImagesAndEstimateDFAST(
     return image_array, D_estimates
 
 
-def generateImageforParticle(arg):
+def _generateImageforParticle(arg):
     """
     Generates the images for a single particle and estimates the diffusion coefficient (D)
     """
