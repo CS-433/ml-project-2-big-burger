@@ -7,6 +7,8 @@ from helpers import *
 from tqdm import tqdm
 from os import path, makedirs
 
+CPU_COUNT = mp.cpu_count()
+
 def generateImagesAndEstimateD(
     nparticles, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
     flux, background, poisson_noise, gaussian_noise, normalizeValue=-1, save_dir=None):
@@ -39,19 +41,17 @@ def generateImagesAndEstimateD(
     time_range = np.arange(nframes * nposframe) * dt / nposframe
 
     # Simulate Brownian motion for all particles
-    trajectories = brownian_motion(nparticles, nframes, nposframe, D, dt)
+    trajectories = _brownian_motion(nparticles, nframes, nposframe, D, dt)
 
     args = [(trajectories[p].copy(), nframes, npixel, factor_hr, nposframe, 
              fwhm_psf, pixelsize, flux, background, poisson_noise, gaussian_noise, 
              time_range, normalizeValue) for p in range(nparticles)]
     
-
-    cpu_count = mp.cpu_count()
-    print(f"running program on each {cpu_count} cpu core of the computer")
+    print(f"running program on each {CPU_COUNT} cpu core of the computer")
     # Multiprocessing
-    with mp.Pool(cpu_count) as pool:
+    with mp.Pool(CPU_COUNT) as pool:
         results = list(tqdm(
-                pool.imap(generateImageforParticle, args),
+                pool.imap(_generateImageforParticle, args),
                 total=nparticles,
                 desc="Generating images and estimating D"
                 ))    
@@ -73,7 +73,64 @@ def generateImagesAndEstimateD(
     return image_array, D_estimates
 
 
-def generateImageforParticle(arg):
+def _brownian_motion(nparticles, nframes, nposframe, D, dt, startAtZero=False):
+    """
+    Simulates the Brownian motion of particles over a specified number of frames 
+    and interframe positions.
+
+    Parameters:
+    - nparticles (int): Number of particles to simulate.
+    - nframes (int): Number of frames in the simulation.
+    - nposframe (int): Number of interframe positions to calculate per frame.
+    - D (float): Diffusion coefficient, influencing the spread of particle movement.
+    - dt (float): Time interval between frames, affects particle displacement.
+    - startAtZero (bool): If True, initializes the starting position at (0, 0).
+
+    Returns:
+    - trajectory (ndarray): Array of shape (nparticles, num_steps, 2) containing 
+                            the x, y coordinates of each particle at each time step.
+                            `num_steps` is calculated as `nframes * nposframe`.
+    """
+    num_steps = nframes * nposframe
+    positions = np.zeros(2)
+    trajectory = np.zeros((nparticles, num_steps, 2))
+    
+    # the formula for sigma might be wrong ?
+    #https://en.wikipedia.org/wiki/Mean_squared_displacement#:~:text=In%20statistical%20mechanics%2C%20the%20mean,a%20reference%20position%20over%20time.
+    #https://en.wikipedia.org/wiki/Gaussian_function
+    sigma = np.sqrt(2 * D * dt / nposframe)
+    #sigma = np.sqrt(4 * D * dt / nposframe)  # Standard deviation of step size based on D and dt
+
+    #for p in range(nparticles):
+
+    with mp.Pool(mp.cpu_count()) as pool:
+        trajectory = np.array(list(tqdm(
+                pool.imap(_generate_trajectory, [(num_steps, sigma, startAtZero)]*nparticles),
+                total=nparticles,
+                desc="Generating trajectories"
+                )))
+         
+    assert trajectory.shape == (nparticles, num_steps, 2), "Trajectory shape is incorrect"
+
+    return trajectory
+
+
+def _generate_trajectory(args):
+    (num_steps, sigma, startAtZero) = args
+    # Generate random steps in x and y directions based on normal distribution
+    dxy = np.random.randn(num_steps, 2) * sigma
+    if startAtZero:
+        dxy[0, :] = [0, 0]  # Set starting position at origin for the first step
+    # Calculate cumulative sum to get positions from step displacements
+    positions = np.cumsum(dxy, axis=0)
+
+    # if the trajectory is out of the frame, we redo the trajectory
+    if np.any(np.abs(positions) > 1): 
+        return _generate_trajectory(args)
+
+    return positions
+
+def _generateImageforParticle(arg):
     """
     Generates the images for a single particle and estimates the diffusion coefficient (D)
     """
