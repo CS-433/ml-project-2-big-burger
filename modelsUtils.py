@@ -101,8 +101,8 @@ def predict_diffusion_coefficients(model, images, device):
 
     Parameters:
     - model: The trained model.
-    - images: A numpy array or tensor of shape (8, 64, 64) for a single image 
-              or (N, 8, 64, 64) for multiple images.
+    - images: A numpy array or tensor of shape (16, 64, 64) for a single image 
+              or (N, 16, 64, 64) for multiple images.
     - device: The device (CPU or GPU) where the model is located.
 
     Returns:
@@ -114,9 +114,9 @@ def predict_diffusion_coefficients(model, images, device):
     
     # If the input is a single image, add the batch dimension
     if images.ndim == 3:  # Single image case
-        images = images.unsqueeze(0)  # (8, 64, 64) -> (1, 8, 64, 64)
+        images = images.unsqueeze(0)  # (16, 64, 64) -> (1, 16, 64, 64)
     
-    # Add the channel dimension: (N, 8, 64, 64) -> (N, 8, 1, 64, 64)
+    # Add the channel dimension: (N, 16, 64, 64) -> (N, 16, 1, 64, 64)
     images = images.unsqueeze(2)
     
     # Move the images to the same device as the model
@@ -133,3 +133,53 @@ def predict_diffusion_coefficients(model, images, device):
     # Return the predictions as a list
     return predicted_Ds.squeeze()
 
+def predict_with_rotations(model, images, device):
+    """
+    Predict the diffusion coefficient D for images, considering rotations.
+
+    Parameters:
+    - model: The trained model.
+    - images: A numpy array or tensor of shape (16, 64, 64) for a single image 
+              or (N, 16, 64, 64) for multiple images.
+    - device: The device (CPU or GPU) where the model is located.
+
+    Returns:
+    - averaged_Ds: A list of averaged predicted diffusion coefficients.
+    """
+    # Ensure the images are a PyTorch tensor
+    if isinstance(images, np.ndarray):
+        images = torch.tensor(images, dtype=torch.float32)
+    
+    # If the input is a single image, add the batch dimension
+    if images.ndim == 3:  # Single image case
+        images = images.unsqueeze(0)  # (16, 64, 64) -> (1, 16, 64, 64)
+    
+    # Add the channel dimension: (N, 16, 64, 64) -> (N, 16, 1, 64, 64)
+    images = images.unsqueeze(2)
+    
+    # Move the images to the same device as the model
+    images = images.to(device)
+    
+    # Prepare rotations
+    rotations = [0, 90, 180, 270]
+    rotated_predictions = []
+
+    # Set the model to evaluation mode
+    model.eval()
+    
+    # Disable gradient computation for inference
+    with torch.no_grad():
+        for angle in rotations:
+            if angle > 0:
+                rotated_images = torch.rot90(images, k=angle // 90, dims=(3, 4))
+            else:
+                rotated_images = images
+            # Predict on rotated images
+            predicted_Ds = model(rotated_images)
+            rotated_predictions.append(predicted_Ds)
+    
+    # Stack predictions and average
+    rotated_predictions = torch.stack(rotated_predictions, dim=0)  # Shape: (4, N, 1)
+    averaged_Ds = torch.mean(rotated_predictions, dim=0)  # Shape: (N, 1)
+    
+    return averaged_Ds.squeeze(), rotated_predictions  # Return as a list
