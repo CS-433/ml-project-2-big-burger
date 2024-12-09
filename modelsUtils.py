@@ -6,7 +6,7 @@ import numpy as np
 
 
 # Training function
-def train_model(model, images, Ds,device, criterion, optimizer, epochs=1, batch_size=32):
+def train_model(model, images, Ds,device, criterion, optimizer, epochs=1, batch_size=32, verbose=False):
     """
     Train the model to predict diffusion coefficient D.
     
@@ -59,7 +59,8 @@ def train_model(model, images, Ds,device, criterion, optimizer, epochs=1, batch_
         
         epoch_loss = running_loss / len(dataset)
         loss_history.append(epoch_loss)
-        print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss:.4f}")
+        if(verbose):
+            print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss:.4f}")
 
     
     return model, loss_history

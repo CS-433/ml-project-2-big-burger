@@ -1,47 +1,36 @@
 import torch.nn as nn
 
-class DiffusionPredictorCNN(nn.Module):
+class SimpleCNN(nn.Module):
     def __init__(self):
         super().__init__()
         
-        # Convolutional layers for spatial feature extraction
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(2, 2)  # Downsample by factor of 2
+        # Convolutional layers for feature extraction
+        self.conv1 = nn.Conv2d(16, 32, kernel_size=7, stride=2, padding=3)  # Input channels: 16
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=7, stride=2, padding=3)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=7, stride=2, padding=3)
         self.relu = nn.ReLU()
         
-        # LSTM for temporal feature extraction
-        self.lstm = nn.LSTM(input_size=64 * 8 * 8, hidden_size=128, batch_first=True)
-        
         # Fully connected layers
-        self.fc1 = nn.Linear(128, 64)
-        self.fc2 = nn.Linear(64, 1)  # Single output for D
+        self.fc1 = nn.Linear(128 * 8 * 8, 128)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, 1)  # Single output for D
     
     def forward(self, x):
-        batch_size, timesteps, c, h, w = x.size()
+        # Input shape: (batch_size, timesteps=16, c=1, h=64, w=64)
+        # Combine temporal dimension with channel dimension: (batch_size, timesteps * c, h, w)
+        x = x.view(x.size(0), -1, x.size(-2), x.size(-1))
         
-        # Apply convolutional layers on each frame
-        x = x.view(batch_size * timesteps, c, h, w)
-        x = self.relu(self.conv1(x))
-        x = self.pool(x)
-        x = self.relu(self.conv2(x))
-        x = self.pool(x)
-        x = self.relu(self.conv3(x))
-        x = self.pool(x)  # Final size: (batch_size * timesteps, 64, 8, 8)
+        # Apply convolutional layers
+        x = self.relu(self.conv1(x))  # Output: (batch_size, 32, 32, 32)
+        x = self.relu(self.conv2(x))  # Output: (batch_size, 64, 16, 16)
+        x = self.relu(self.conv3(x))  # Output: (batch_size, 128, 8, 8)
         
-        # Flatten spatial dimensions
-        x = x.view(batch_size, timesteps, -1)
-        
-        # LSTM for temporal processing
-        x, _ = self.lstm(x)  # Output size: (batch_size, timesteps, 128)
-        
-        # Take the last timestep output
-        x = x[:, -1, :]  # Size: (batch_size, 128)
+        # Flatten for fully connected layers
+        x = x.view(x.size(0), -1)  # Output: (batch_size, 128 * 8 * 8)
         
         # Fully connected layers
-        x = self.relu(self.fc1(x))
-        x = self.fc2(x)  # Size: (batch_size, 1)
+        x = self.relu(self.fc1(x))  # Output: (batch_size, 128)
+        x = self.relu(self.fc2(x))  # Output: (batch_size, 64)
+        x = self.fc3(x)             # Output: (batch_size, 1)
         
         return x
-    
