@@ -21,8 +21,8 @@ initial_guess = [100, 30]
 # Bounds for sigmas (adjust as needed)
 bounds = [(1, 300), (1, 300)]
 
-TOL = 1e-5
-MAXITER = 20
+TOL = 1e-4 # Convergence tolerance, the lower the better but the slower
+MAXITER = 10 # doesnt seem to have a big impact
 
 
 # Hyperparameters for simulation
@@ -62,6 +62,9 @@ def optimize_blur(original_image):
     min_difference : float
         The minimal difference metric between images
     """
+
+    metric_log = []
+
     def difference_metric(sigmas, verbose=True):
         """
         Compute the difference between the original and blurred image.
@@ -94,11 +97,13 @@ def optimize_blur(original_image):
         
         # Combined metric: minimize negative SSIM and maximize PSNR, minimize MSE
         combined_difference = -ssim + mse / (psnr + 1e-10)
+
+        metric_log.append([ssim, mse, psnr, combined_difference])
         
         if verbose:
             print(f"Sigmas: {gaussian_noise:.4f}, {poisson_noise:.4f} | SSIM: {ssim:.4f} | MSE: {mse:.4f} | PSNR: {psnr:.4f}")
-        
-        return combined_difference #mse
+                
+        return combined_difference #-ssim #mse
 
     
 
@@ -122,11 +127,10 @@ def optimize_blur(original_image):
         recombination=0.7,  # Crossover rate
         mutation=(0.5, 1.5)  # Mutation scaling factor range
     )
-    
     # Get optimal sigmas and corresponding blurred image
     optimal_sigmas = result.x
     
-    return optimal_sigmas, -result.fun
+    return optimal_sigmas, -result.fun, np.array(metric_log)
 
 def generate_noisy_image(poisson_noise, gaussian_noise, nthframe=0):
     """
@@ -160,6 +164,28 @@ def plot_2_image(image, blurred, title=""):
     plt.suptitle(title)
     plt.show()
 
+def plot_metric_log(metric_log):
+    iterations = np.arange(1, metric_log.shape[0]+1)
+    fig, ax = plt.subplots(4, 1, figsize=(10, 20))
+    ax[0].scatter(iterations, metric_log[:, 0], label='SSIM')
+    #ax[0].set_title('SSIM')
+    ax[0].set_xlabel('iterations')
+    ax[0].set_ylabel('SSIM')
+    ax[1].scatter(iterations, metric_log[:, 1], label='MSE')
+    #ax[1].set_title('MSE')
+    ax[1].set_xlabel('iterations')
+    ax[1].set_ylabel('MSE')
+    ax[2].scatter(iterations, metric_log[:, 2], label='PSNR')
+    #ax[2].set_title('PSNR')
+    ax[2].set_xlabel('iterations')
+    ax[2].set_ylabel('PSNR')
+    ax[3].scatter(iterations, metric_log[:, 3], label='Combined Difference')
+    #ax[3].set_title('Combined Difference')
+    ax[3].set_xlabel('iterations')
+    ax[3].set_ylabel('Combined Difference')
+    plt.tight_layout()
+    plt.show()
+
 def prepare_image(img):
     # Convert to float
     img_float = np.array(img).astype(np.float64)
@@ -177,11 +203,9 @@ def main():
     #image_array = np.array(image) / 18000 # Normalize by 18000
 
     image_array = prepare_image(image)
-
-    print(image_array.shape)
     
     # Optimize blur
-    (opt_gaussian_noise, opt_poisson_noise), similarity = optimize_blur(image_array)
+    (opt_gaussian_noise, opt_poisson_noise), similarity, metric_log = optimize_blur(image_array)
     
     # Print and save results
     print(f"Optimal Blur (gaussian_noise): {opt_gaussian_noise}")
@@ -191,6 +215,7 @@ def main():
     # Generate blurred image
     blurred_image = generate_noisy_image(opt_gaussian_noise, opt_poisson_noise)
     plot_2_image(image_array, blurred_image, title=f"Original vs Generated Image with {opt_gaussian_noise} gaussian and {opt_poisson_noise} poisson noise")
+    plot_metric_log(metric_log)
 
 
 if __name__ == "__main__":

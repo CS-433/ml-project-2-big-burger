@@ -50,6 +50,7 @@ def optimize_blur(original_image):
     min_difference : float
         The minimal difference metric between images
     """
+    metric_log = []
     def difference_metric(sigma):
         """
         Compute the difference between the original and blurred image.
@@ -71,6 +72,7 @@ def optimize_blur(original_image):
         # We want to minimize, so we return the negative of SSIM
         ssim = metrics.structural_similarity(original_image, blurred, 
                                              data_range=original_image.max() - original_image.min())
+        metric_log.append(ssim)
         return -ssim  # Minimize negative SSIM (maximize actual SSIM)
     
     # Perform optimization
@@ -80,7 +82,7 @@ def optimize_blur(original_image):
     # Get optimal sigma and corresponding blurred image
     optimal_sigma = result.x
     
-    return optimal_sigma, -result.fun
+    return optimal_sigma, -result.fun, np.array(metric_log)
 
 def generate_noisy_image(poisson_noise, gaussian_noise, nthframe=0):
     """
@@ -113,6 +115,16 @@ def plot_2_image(image, blurred, title=""):
     plt.suptitle(title)
     plt.show()
 
+def plot_metric_log(metric_log):
+    iterations = np.arange(1, metric_log.shape[0]+1)
+    plt.figure(figsize=(8, 4))
+    plt.scatter(iterations, metric_log, label='SSIM')
+    plt.title('SSIM')
+    plt.xlabel('iterations')
+    plt.ylabel('SSIM')
+    plt.tight_layout()
+    plt.show()
+
 def prepare_image(img):
     # Convert to float
     img_float = np.array(img).astype(np.float64)
@@ -126,10 +138,9 @@ def main():
     image = Image.open(IMAGE_PATH)
     #image_array = np.array(image) / 18000 # Normalize by 18000
     image_array = prepare_image(image)
-    print(image_array.shape)
     
     # Optimize blur
-    sigma, similarity = optimize_blur(image_array)
+    sigma, similarity, metric_log = optimize_blur(image_array)
     
     # Print and save results
     print(f"Optimal Blur (sigma): {sigma}")
@@ -137,5 +148,6 @@ def main():
     # Generate blurred image
     blurred_image = generate_noisy_image(sigma, sigma)
     plot_2_image(image_array, blurred_image, title=f"Original vs Generated Image with {sigma} gaussian and {sigma} poisson noise")
+    plot_metric_log(metric_log)
 if __name__ == "__main__":
     main()
