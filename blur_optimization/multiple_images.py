@@ -1,4 +1,4 @@
-from utils import plot_2_image, prepare_image, generate_noisy_image, IMAGE_PATH
+from utils import plot_2_image, prepare_image, generate_noisy_image, IMAGE_PATH, metrics_computation
 import sys
 sys.path.append('.')
 from blur_optimization import main as blur_optimization_main
@@ -35,14 +35,8 @@ def main():
     #image_array = np.array(image) / 18000 # Normalize by 18000
     image_array = prepare_image(image)
 
-    # Compute Structural Similarity Index (SSIM)
-    # Note: SSIM ranges from -1 to 1, where 1 is perfect similarity
-    # We want to minimize, so we return the negative of SSIM
-    similarity = metrics.structural_similarity(image_array, gen_image, 
-                                            data_range=image_array.max() - image_array.min())
-    
     # Plot noisy image
-    plot_2_image(image_array, gen_image, title=f"Original vs Generated Image with average gaussian and poisson noise {avg_sigma}. SSIM: {similarity}")
+    plot_2_image(image_array, gen_image, title=f"Original vs Generated Image with average gaussian and poisson noise {avg_sigma:.4f}\n{metrics_computation(image_array, gen_image, str=True)}")
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.append('.')
 from generate_images_fast.generate_images_fast import generateImagesAndEstimateD
+from skimage import metrics
 
 # picking first image in real data
 IMAGE_PATH = "real-data/blocks_64x64x16_70_01/block-001-6.658-0.057-456.tif"
@@ -69,3 +70,20 @@ def generate_noisy_image(poisson_noise, gaussian_noise, nthframe=0):
     images = generateImagesAndEstimateD(nparticles,nframes,npixel,factor_hr,nposframe,D,dt,fwhm_psf,pixelsize,flux,background,poisson_noise, gaussian_noise, silent=True)[0]
 
     return prepare_image(images[0, nthframe, :, :])
+
+
+def metrics_computation(image_array, noisy_image, str=False):
+
+    # Compute Structural Similarity Index (SSIM)
+    # Note: SSIM ranges from -1 to 1, where 1 is perfect similarity
+    # We want to minimize, so we return the negative of SSIM
+    similarity = metrics.structural_similarity(image_array, noisy_image, 
+                                             data_range=image_array.max() - image_array.min())
+    
+    # Mean Squared Error (MSE)
+    mse = metrics.mean_squared_error(image_array, noisy_image)
+        
+    # Peak Signal-to-Noise Ratio (PSNR)
+    psnr = metrics.peak_signal_noise_ratio(image_array, noisy_image)
+
+    return f"SSIM: {similarity:.4f} | MSE: {mse:.4f} | PSNR: {psnr:.4f}" if str else (similarity, mse, psnr)

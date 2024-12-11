@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 import sys
 sys.path.append('.')
-from utils import plot_2_image, prepare_image, generate_noisy_image, IMAGE_PATH
+from utils import plot_2_image, prepare_image, generate_noisy_image, IMAGE_PATH, metrics_computation
 
 # compares first real image of dataset with first image of 1 particle simulation
 # difference_metric(sigma) can return any metric that compares the two images, please try different ones
@@ -61,17 +61,7 @@ def optimize_blur(original_image):
         gaussian_noise, poisson_noise = abs(sigmas)
         blurred = generate_noisy_image(gaussian_noise=gaussian_noise, poisson_noise=poisson_noise)
 
-        # Compute Structural Similarity Index (SSIM)
-        # Note: SSIM ranges from -1 to 1, where 1 is perfect similarity
-        # We want to minimize, so we return the negative of SSIM
-        ssim = metrics.structural_similarity(original_image, blurred, 
-                                             data_range=original_image.max() - original_image.min())
-
-        # Mean Squared Error (MSE)
-        mse = metrics.mean_squared_error(original_image, blurred)
-        
-        # Peak Signal-to-Noise Ratio (PSNR)
-        psnr = metrics.peak_signal_noise_ratio(original_image, blurred)
+        ssim, mse, psnr = metrics_computation(original_image, blurred, str=False)
         
         # Combined metric: minimize negative SSIM and maximize PSNR, minimize MSE
         combined_difference = -ssim + mse / (psnr + 1e-10)
@@ -156,7 +146,7 @@ def main():
     blurred_image = generate_noisy_image(opt_gaussian_noise, opt_poisson_noise)
     similarity = metrics.structural_similarity(image_array, blurred_image, 
                                              data_range=image_array.max() - image_array.min())
-    plot_2_image(image_array, blurred_image, title=f"Original vs Generated Image with {opt_gaussian_noise} gaussian and {opt_poisson_noise} poisson noise. SSIM: {similarity}")
+    plot_2_image(image_array, blurred_image, title=f"Original vs Generated Image with {opt_gaussian_noise:.4f} gaussian and {opt_poisson_noise:.4f} poisson noise\n{metrics_computation(image_array, blurred_image, str=True)}")
     plot_metric_log(metric_log)
 
 
