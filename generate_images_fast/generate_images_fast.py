@@ -11,7 +11,7 @@ CPU_COUNT = mp.cpu_count()
 
 def generateImagesAndEstimateD(
     nparticles, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
-    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1, save_dir=None):
+    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1, save_dir=None, silent=False):
     """
     Generates the full pipeline of images and estimates the diffusion coefficient (D) for each particle.
 
@@ -40,20 +40,23 @@ def generateImagesAndEstimateD(
     D_estimates = np.zeros(nparticles)
     time_range = np.arange(nframes * nposframe) * dt / nposframe
 
+    if not silent: print(f"running program on each {CPU_COUNT} cpu core of the computer")
+
+
     # Simulate Brownian motion for all particles
-    trajectories = _brownian_motion(nparticles, nframes, nposframe, D, dt)
+    trajectories = _brownian_motion(nparticles, nframes, nposframe, D, dt, silent=silent)
 
     args = [(trajectories[p].copy(), nframes, npixel, factor_hr, nposframe, 
              fwhm_psf, pixelsize, flux, background, poisson_noise, gaussian_noise, 
              time_range, normalizeValue) for p in range(nparticles)]
     
-    print(f"running program on each {CPU_COUNT} cpu core of the computer")
     # Multiprocessing
     with mp.Pool(CPU_COUNT) as pool:
         results = list(tqdm(
                 pool.imap(_generateImageforParticle, args),
                 total=nparticles,
-                desc="Generating images and estimating D"
+                desc="Generating images and estimating D",
+                disable=silent
                 ))    
     
     for p, (frame_noisy, D_estimate) in enumerate(results):
@@ -73,7 +76,7 @@ def generateImagesAndEstimateD(
     return image_array, D_estimates
 
 
-def _brownian_motion(nparticles, nframes, nposframe, D, dt, startAtZero=False):
+def _brownian_motion(nparticles, nframes, nposframe, D, dt, startAtZero=False, silent=False):
     """
     Simulates the Brownian motion of particles over a specified number of frames 
     and interframe positions.
@@ -107,7 +110,8 @@ def _brownian_motion(nparticles, nframes, nposframe, D, dt, startAtZero=False):
         trajectory = np.array(list(tqdm(
                 pool.imap(_generate_trajectory, [(num_steps, sigma, startAtZero)]*nparticles),
                 total=nparticles,
-                desc="Generating trajectories"
+                desc="Generating trajectories",
+                disable=silent
                 )))
          
     assert trajectory.shape == (nparticles, num_steps, 2), "Trajectory shape is incorrect"

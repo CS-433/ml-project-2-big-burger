@@ -2,17 +2,28 @@ import numpy as np
 import skimage.io as io
 import skimage.filters as filters
 import skimage.metrics as metrics
-from scipy.optimize import minimize_scalar
+from scipy.optimize import minimize_scalar, minimize, differential_evolution
 from PIL import Image
+import matplotlib.pyplot as plt
+
 import sys
 sys.path.append('.')
 from generate_images_fast.generate_images_fast import generateImagesAndEstimateD
-import matplotlib.pyplot as plt
 
 # compares first real image of dataset with first image of 1 particle simulation
+# difference_metric(sigma) can return any metric that compares the two images, please try different ones
+
 # picking first image in real data
 IMAGE_PATH = "real-data/blocks_64x64x16_70_01/block-001-6.658-0.057-456.tif"
-BOUNDS = (1, 100)
+# Initial guess for sigmas
+initial_guess = [100, 30]
+
+# Bounds for sigmas (adjust as needed)
+bounds = [(1, 300), (1, 300)]
+
+TOL = 1e-5
+MAXITER = 20
+
 
 # Hyperparameters for simulation
 nparticles = 1   # Number of particles
@@ -34,6 +45,7 @@ normalizeValue = 1000 # value by which all samples will be normalized ! Needs to
 n_val_im = 50
 D = 10
 
+
 def optimize_blur(original_image):
     """
     Find the optimal Gaussian blur amount to match the original image.
@@ -50,7 +62,7 @@ def optimize_blur(original_image):
     min_difference : float
         The minimal difference metric between images
     """
-    def difference_metric(sigma):
+    def difference_metric(sigmas, verbose=True):
         """
         Compute the difference between the original and blurred image.
         Uses Structural Similarity Index (SSIM) as the difference metric.
@@ -65,28 +77,63 @@ def optimize_blur(original_image):
         difference : float
             Lower values indicate more similar images
         """
-        blurred = generate_noisy_image(sigma, sigma)
+        gaussian_noise, poisson_noise = abs(sigmas)
+        blurred = generate_noisy_image(gaussian_noise=gaussian_noise, poisson_noise=poisson_noise)
+
         # Compute Structural Similarity Index (SSIM)
         # Note: SSIM ranges from -1 to 1, where 1 is perfect similarity
         # We want to minimize, so we return the negative of SSIM
         ssim = metrics.structural_similarity(original_image, blurred, 
                                              data_range=original_image.max() - original_image.min())
-        return -ssim  # Minimize negative SSIM (maximize actual SSIM)
+
+        # Mean Squared Error (MSE)
+        mse = metrics.mean_squared_error(original_image, blurred)
+        
+        # Peak Signal-to-Noise Ratio (PSNR)
+        psnr = metrics.peak_signal_noise_ratio(original_image, blurred)
+        
+        # Combined metric: minimize negative SSIM and maximize PSNR, minimize MSE
+        combined_difference = -ssim + mse / (psnr + 1e-10)
+        
+        if verbose:
+            print(f"Sigmas: {gaussian_noise:.4f}, {poisson_noise:.4f} | SSIM: {ssim:.4f} | MSE: {mse:.4f} | PSNR: {psnr:.4f}")
+        
+        return combined_difference #mse
+
     
-    # Perform optimization
-    # Bounds are typically between 0 and 5 for sigma, adjust if needed
-    result = minimize_scalar(difference_metric, bounds=BOUNDS, method='bounded')
+
     
-    # Get optimal sigma and corresponding blurred image
-    optimal_sigma = result.x
+    # # Perform optimization
+    # result = minimize(
+    #     difference_metric, 
+    #     initial_guess, 
+    #     method='L-BFGS-B',  # Allows bound constraints
+    #     bounds=bounds
+    # )
+
+    # Perform optimization using Differential Evolution
+    result = differential_evolution(
+        difference_metric,
+        bounds=bounds,
+        strategy='best1bin',  # Robust crossover strategy
+        popsize=15,  # Larger population for more thorough search
+        maxiter=MAXITER,  # More iterations
+        tol= TOL,#1e-7,  # Convergence tolerance
+        recombination=0.7,  # Crossover rate
+        mutation=(0.5, 1.5)  # Mutation scaling factor range
+    )
     
-    return optimal_sigma, -result.fun
+    # Get optimal sigmas and corresponding blurred image
+    optimal_sigmas = result.x
+    
+    return optimal_sigmas, -result.fun
 
 def generate_noisy_image(poisson_noise, gaussian_noise, nthframe=0):
     """
     generate image with chosen amount of noise
     return the first image of the generated images
     """
+
     images = generateImagesAndEstimateD(nparticles,nframes,npixel,factor_hr,nposframe,D,dt,fwhm_psf,pixelsize,flux,background,poisson_noise, gaussian_noise, silent=True)[0]
 
     return prepare_image(images[0, nthframe, :, :])
@@ -122,20 +169,29 @@ def prepare_image(img):
     
     return img_normalized
 
+
 def main():
+
+
     image = Image.open(IMAGE_PATH)
     #image_array = np.array(image) / 18000 # Normalize by 18000
+
     image_array = prepare_image(image)
+
     print(image_array.shape)
     
     # Optimize blur
-    sigma, similarity = optimize_blur(image_array)
+    (opt_gaussian_noise, opt_poisson_noise), similarity = optimize_blur(image_array)
     
     # Print and save results
-    print(f"Optimal Blur (sigma): {sigma}")
+    print(f"Optimal Blur (gaussian_noise): {opt_gaussian_noise}")
+    print(f"Optimal Blur (poisson_noise): {opt_poisson_noise}")
     print(f"Similarity Score: {similarity}")
+
     # Generate blurred image
-    blurred_image = generate_noisy_image(sigma, sigma)
-    plot_2_image(image_array, blurred_image, title=f"Original vs Generated Image with {sigma} gaussian and {sigma} poisson noise")
+    blurred_image = generate_noisy_image(opt_gaussian_noise, opt_poisson_noise)
+    plot_2_image(image_array, blurred_image, title=f"Original vs Generated Image with {opt_gaussian_noise} gaussian and {opt_poisson_noise} poisson noise")
+
+
 if __name__ == "__main__":
     main()
