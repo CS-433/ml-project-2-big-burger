@@ -72,7 +72,7 @@ def optimize_blur(original_image):
         # We want to minimize, so we return the negative of SSIM
         ssim = metrics.structural_similarity(original_image, blurred, 
                                              data_range=original_image.max() - original_image.min())
-        metric_log.append(ssim)
+        metric_log.append([sigma, ssim])
         return -ssim  # Minimize negative SSIM (maximize actual SSIM)
     
     # Perform optimization
@@ -117,11 +117,16 @@ def plot_2_image(image, blurred, title=""):
 
 def plot_metric_log(metric_log):
     iterations = np.arange(1, metric_log.shape[0]+1)
-    plt.figure(figsize=(8, 4))
-    plt.scatter(iterations, metric_log, label='SSIM')
-    plt.title('SSIM')
-    plt.xlabel('iterations')
-    plt.ylabel('SSIM')
+    _, axes = plt.subplots(2, 1, figsize=(15, 8))
+
+    axes[0].scatter(iterations, metric_log[:, 1], label='SSIM')
+    axes[0].set_title('SSIM vs Iterations')
+    axes[0].set_xlabel('Iterations')
+    axes[0].set_ylabel('SSIM')
+    axes[1].scatter(metric_log[:, 0], metric_log[:, 1], label='SSIM')
+    axes[1].set_title('SSIM vs Gaussian and Poisson Noise')
+    axes[1].set_xlabel('Gaussian and Poisson Noise')
+    axes[1].set_ylabel('SSIM')
     plt.tight_layout()
     plt.show()
 
