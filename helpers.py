@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from os import path, makedirs
 import multiprocessing as mp
 from tqdm import tqdm
+from scipy.optimize import curve_fit
 
 
 
@@ -782,3 +783,97 @@ def _generate_trajectory(args):
 
     return positions
 
+
+# Define a 2D Gaussian model
+def two_d_gaussian(coords, amplitude, x0, y0, sigma_x, sigma_y, theta, offset):
+    x, y = coords
+    xo = float(x0)
+    yo = float(y0)
+    a = (np.cos(theta)**2) / (2 * sigma_x**2) + (np.sin(theta)**2) / (2 * sigma_y**2)
+    b = -(np.sin(2 * theta)) / (4 * sigma_x**2) + (np.sin(2 * theta)) / (4 * sigma_y**2)
+    c = (np.sin(theta)**2) / (2 * sigma_x**2) + (np.cos(theta)**2) / (2 * sigma_y**2)
+    g = offset + amplitude * np.exp(- (a * ((x - xo)**2) + 2 * b * (x - xo) * (y - yo) + c * ((y - yo)**2)))
+    return g.ravel()
+
+# Fit a 2D Gaussian to an image
+def fit_gaussian_to_image(img):
+    y_size, x_size = img.shape
+    x = np.linspace(0, x_size - 1, x_size)
+    y = np.linspace(0, y_size - 1, y_size)
+    x, y = np.meshgrid(x, y)
+
+    amplitude_guess = np.max(img)
+    y0_guess, x0_guess = np.unravel_index(np.argmax(img), img.shape)
+    sigma_x_guess = sigma_y_guess = 2.0
+    theta_guess = 0
+    offset_guess = np.median(img)
+
+    initial_guess = (amplitude_guess, x0_guess, y0_guess, sigma_x_guess, sigma_y_guess, theta_guess, offset_guess)
+    popt, _ = curve_fit(two_d_gaussian, (x, y), img.ravel(), p0=initial_guess, maxfev=2000)
+    x0, y0 = popt[1], popt[2]
+    return x0, y0
+
+# Extract centroids from the images
+def  get_centroids_1(images):
+    centroids = []
+    for img in images:
+        x0, y0 = fit_gaussian_to_image(img)
+        centroids.append((x0, y0))
+    return np.array(centroids)
+
+# Compute Mean Squared Displacement (MSD)
+def compute_msd(positions, dt):
+    N = positions.shape[0]
+    msd = []
+    time_lags = []
+    for lag in range(1, N):
+        diffs = positions[lag:] - positions[:-lag]
+        squared_diffs = np.sum(diffs**2, axis=1)
+        msd.append(np.mean(squared_diffs))
+        time_lags.append(lag * dt)
+    return np.array(time_lags), np.array(msd)
+
+# Fit diffusion coefficient from MSD
+def fit_diffusion_coefficient(time_lags, msd):
+    model = LinearRegression(fit_intercept=False)
+    model.fit(time_lags.reshape(-1, 1), msd)  # Fit model to data
+    slope = model.coef_[0]
+    D_estimated = slope / 4
+    return D_estimated
+
+def getCoarseD(images, dt):
+    # Compute centroids, MSD, and diffusion coefficient
+    centroids =  get_centroids_1(images)
+    time_lags, msd = compute_msd(centroids, dt)
+    D_pixel_units = fit_diffusion_coefficient(time_lags, msd)
+    return D_pixel_units
+
+import numpy as np
+
+def compute_coarseD_for_batch(images_batch, dt):
+    """
+    Computes coarse diffusion coefficient (D) for a batch of images.
+    
+    Args:
+        images_batch (numpy.ndarray): A NumPy array of shape (N, 16, 64, 64), 
+                                       where N is the number of image sequences.
+        dt (float): The time interval between frames in the image sequence.
+        
+    Returns:
+        numpy.ndarray: A 1D array of coarse D predictions, with length N.
+    """
+    # Validate input shape
+    if images_batch.ndim != 4 or images_batch.shape[1:] != (16, 64, 64):
+        raise ValueError("Input images_batch must have shape (N, 16, 64, 64).")
+    
+    # Initialize a list to store coarse D values
+    coarseD_values = []
+    
+    # Iterate over each sequence in the batch
+    for images in images_batch:
+        # Call getCoarseD for the current sequence of 16 images
+        coarseD = getCoarseD(images, dt)
+        coarseD_values.append(coarseD)
+    
+    # Convert the list of coarse D values to a NumPy array
+    return np.array(coarseD_values)
