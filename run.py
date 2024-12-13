@@ -13,6 +13,7 @@ from PIL import Image
 RETRAIN = False
 # directory with weigths, losses, and plots
 OUTPUT_DIR = "run_outputs/"
+REAL_DATA = True
 REAL_DATA_PATH = "real-data/blocks_64x64x16_70_01"
 
 # Hyperparameters for simulation
@@ -40,7 +41,7 @@ print(f"Using device: {device}")
 
 
 # Models used in a dictionnary comprehension. 
-# To add  anew model, simply add it to the list with the wanted train fct
+# To add  a new model, simply add it to the list with the wanted train fct
 
 lr = 0.000001
 models_params = {
@@ -69,21 +70,31 @@ def main():
         load_models()
     
     # print predictions
-    predict()
+    if REAL_DATA: 
+        print("Predicting real data:")
+        load_real_images_and_predict()
+        print("Plotting real images:")
+        load_and_plot_real_images()
+    
     print("Plotting results:")
     # Plot the generated D values
     print("Plotting generated D values")
     plot_generated_Ds(allGeneratedDs)
-    # Plot the losses
-    print("Plotting losses")
-    plot_losses(tr_loss_histories, totalEpochs)
+    if RETRAIN:
+        # Plot the losses
+        print("Plotting losses")
+        plot_losses(tr_loss_histories, totalEpochs)
     # Plot the true vs predicted D values
     print("Plotting true vs predicted D values")
-    coarseD_array, valDs_array =  plot_trueVpredicted_Dvalues(val_images, valDs)
+
+    # DOES NOT WORK
+    #coarseD_array, valDs_array =  plot_trueVpredicted_Dvalues(val_images, valDs)
+
     # Plot the true vs predicted D values with absolute error
     print("Plotting true vs predicted D values with absolute error")
-    plot_trueVpredicted_Dvalues_absolute_error(coarseD_array, valDs_array, val_images)
+    #plot_trueVpredicted_Dvalues_absolute_error(coarseD_array, valDs_array, val_images)
     # Save the models, validation losses, and generated D values
+
     print("Saving models, validation losses, and generated D values")
     save_models_validations_losses_epochs(allGeneratedDs, val_loss_histories)
 
@@ -225,13 +236,10 @@ def plot_generated_Ds(allGeneratedDs, output_name="all_generated_Ds.svg"):
     if output_path: plt.savefig(output_path)
     plt.show()
 
-def predict(output_name="predictions.npy"): #"predictions.npy"
+def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01", output_name="predictions.npy"): #"predictions.npy"
 
     output_path = os.path.join(OUTPUT_DIR, output_name) if output_name else None
-
-    # Path to the folder containing the images
-    folder_path = "real-data/blocks_64x64x16_70_01"
-
+    
     # Get a list of all files in the folder
     file_list = sorted(os.listdir(folder_path))  # Sorted lexicographically
 
@@ -274,6 +282,49 @@ def predict(output_name="predictions.npy"): #"predictions.npy"
 
     # Save predictions if needed
     if output_path: np.save(output_path, predictions)
+
+
+def load_and_plot_real_images(folder_path = "real-data/blocks_64x64x16_70_01", output_name="real_images.svg"):
+
+    # Get a list of all files in the folder
+    file_list = sorted(os.listdir(folder_path))  # Sorted lexicographically
+
+    # Filter only files with valid image extensions (e.g., .tif, .jpg, .png)
+    valid_extensions = (".tif")
+    image_files = [f for f in file_list if f.endswith(valid_extensions) and f.startswith("block-001")]
+
+    # Read all images and determine global min and max intensity
+    images = []
+    global_min = float("inf")
+    global_max = float("-inf")
+
+    for file in image_files:
+
+        image_path = os.path.join(folder_path, file)
+        image = Image.open(image_path)
+        image_array = np.array(image)/10000
+        images.append(image_array)
+        global_min = min(global_min, image_array.min())
+        global_max = max(global_max, image_array.max())
+
+    # Display up to 16 images in 2 rows of 8 images each, on the same scale
+    num_images = min(16, len(images))  # Ensure we don't exceed 16 images
+    rows, cols = 2, 8  # 2 rows, 8 images per row
+    plt.figure(figsize=(20, 8))
+
+    for i in range(num_images):
+        plt.subplot(rows, cols, i + 1)
+        plt.imshow(images[i] , cmap="gray", vmin=global_min, vmax=global_max)
+        plt.title(f"Image {i+1}")
+        plt.axis("off")
+
+    plt.tight_layout()
+    if output_name: plt.savefig(os.path.join(OUTPUT_DIR, output_name))
+    plt.show()
+
+    print(f"Global Min Intensity: {global_min}, Global Max Intensity: {global_max}")
+
+
 
 def plot_loss_and_trueVpredicted(val_loss_histories, totalEpochs, val_images, valDs, output_names=["losses.svg", "true_vs_predicted.svg"]):
 
@@ -336,12 +387,15 @@ def plot_trueVpredicted_Dvalues(val_images, valDs, output_name="true_vs_predicte
     # Count the number of models contributing to the average
     model_count = 0
 
+    # COARSE D doesnt WORK !!!!
+
+
     coarseD_tensor = torch.tensor(compute_coarseD_for_batch(val_images, dt), dtype=torch.float32, device=device) / 40
     #coarseD_tensor = torch.clip(coarseD_tensor,0,60)
-    lossCoarseD = criterion(coarseD_tensor, valDs_tensor)  # Loss for coarseD predictions
+    #lossCoarseD = criterion(coarseD_tensor, valDs_tensor)  # Loss for coarseD predictions
     coarseD_array = coarseD_tensor.view(-1).cpu().numpy()  # Convert to numpy for plotting
-    plt.scatter(valDs_array, coarseD_array, color='purple', alpha=0.7, label='Coarse D Predictions', marker='^')
-    print("Coase D Loss:", lossCoarseD.item())
+    plt.scatter(valDs, coarseD_array, color='purple', alpha=0.7, label='Coarse D Predictions', marker='^')
+    #print("Coase D Loss:", lossCoarseD.item())
 
 
     # Iterate over all models to plot predictions vs true values
