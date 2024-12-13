@@ -503,7 +503,7 @@ def load_image(filename):
 
 import matplotlib.pyplot as plt
 
-def plot_image_frames(image, title="Image Frames"):
+def plot_image_frames(image, title="Image Frames", output_path=None):
     """
     Plot all 8 frames of an image in a 2x4 grid.
     
@@ -526,6 +526,7 @@ def plot_image_frames(image, title="Image Frames"):
         ax.axis("off")  # Hide axes for better visualization
     
     plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to include the title
+    if output_path: plt.savefig(output_path)
     plt.show()
 
 def plot_image_frames16(image, title="Image Frames"):
