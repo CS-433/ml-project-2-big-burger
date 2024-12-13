@@ -11,10 +11,9 @@ import numpy as np
 from PIL import Image
 
 RETRAIN = False
-WEIGHTS_PATH = 'weights.h5'
-REAL_DATA_PATH = 'data/real_data'
+# directory with weigths, losses, and plots
 OUTPUT_DIR = "run_outputs/"
-
+REAL_DATA_PATH = "real-data/blocks_64x64x16_70_01"
 
 # Hyperparameters for simulation
 nparticles = 1000   # Number of particles
