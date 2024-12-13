@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 import sys
 sys.path.append('.')
-from utils import plot_2_image, prepare_image, generate_noisy_image, IMAGE_PATH, metrics_computation
+from utils import plot_2_image, prepare_image, generate_noisy_image, IMAGE_PATH, metrics_computation, load_original_image
 
 # compares first real image of dataset with first image of 1 particle simulation
 # difference_metric(sigma) can return any metric that compares the two images, please try different ones
@@ -129,10 +129,7 @@ def plot_metric_log(metric_log):
 def main():
 
 
-    image = Image.open(IMAGE_PATH)
-    #image_array = np.array(image) / 18000 # Normalize by 18000
-
-    image_array = prepare_image(image)
+    image_array = load_original_image()
     
     # Optimize blur
     (opt_gaussian_noise, opt_poisson_noise), similarity, metric_log = optimize_blur(image_array)
