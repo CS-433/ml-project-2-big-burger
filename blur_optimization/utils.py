@@ -4,6 +4,7 @@ import sys
 sys.path.append('.')
 from generate_images_fast.generate_images_fast import generateImagesAndEstimateD
 from skimage import metrics
+from PIL import Image
 
 # picking first image in real data
 IMAGE_PATH = "real-data/blocks_64x64x16_70_01/block-001-6.658-0.057-456.tif"
@@ -29,6 +30,19 @@ n_val_im = 50
 D = 10
 
 
+def prepare_image(img):
+    # Convert to float
+    img_float = np.array(img).astype(np.float64)
+    
+    # Normalize to 0-1 range
+    img_normalized = (img_float - img_float.min()) / (img_float.max() - img_float.min())
+    
+    return img_normalized
+
+NORMALIZE_FUNCTION = [lambda x: x / 18000, prepare_image][0]
+
+
+
 
 def plot_2_image(image, blurred, title=""):
     """
@@ -51,16 +65,6 @@ def plot_2_image(image, blurred, title=""):
     plt.suptitle(title)
     plt.show()
 
-
-def prepare_image(img):
-    # Convert to float
-    img_float = np.array(img).astype(np.float64)
-    
-    # Normalize to 0-1 range
-    img_normalized = (img_float - img_float.min()) / (img_float.max() - img_float.min())
-    
-    return img_normalized
-
 def generate_noisy_image(poisson_noise, gaussian_noise, nthframe=0):
     """
     generate image with chosen amount of noise
@@ -69,7 +73,7 @@ def generate_noisy_image(poisson_noise, gaussian_noise, nthframe=0):
 
     images = generateImagesAndEstimateD(nparticles,nframes,npixel,factor_hr,nposframe,D,dt,fwhm_psf,pixelsize,flux,background,poisson_noise, gaussian_noise, silent=True)[0]
 
-    return prepare_image(images[0, nthframe, :, :])
+    return NORMALIZE_FUNCTION(images[0, nthframe, :, :]) 
 
 
 def metrics_computation(image_array, noisy_image, str=False):
@@ -87,3 +91,9 @@ def metrics_computation(image_array, noisy_image, str=False):
     psnr = metrics.peak_signal_noise_ratio(image_array, noisy_image)
 
     return f"SSIM: {similarity:.4f} | MSE: {mse:.4f} | PSNR: {psnr:.4f}" if str else (similarity, mse, psnr)
+
+def load_original_image(image_path=IMAGE_PATH):
+    image = np.array(Image.open(image_path))
+    image_array = np.array(image) 
+    return NORMALIZE_FUNCTION(image_array)
+
