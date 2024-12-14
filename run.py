@@ -222,9 +222,7 @@ def plot_generated_Ds(allGeneratedDs, output_name="all_generated_Ds.svg"):
 
     output_path = os.path.join(OUTPUT_DIR, output_name) if output_name else None
 
-    print(np.min(allGeneratedDs))
-    print(np.mean(allGeneratedDs))
-    print(np.max(allGeneratedDs))
+    print("Min generated D:", np.min(allGeneratedDs), "Mean generated D:", np.mean(allGeneratedDs), "Max generated D:", np.max(allGeneratedDs))
 
     # Plotting the histogram
     plt.figure(figsize=(10, 6))
