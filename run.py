@@ -16,6 +16,8 @@ RETRAIN = False
 OUTPUT_DIR = "run_outputs/"
 REAL_DATA = True
 REAL_DATA_PATH = "real-data/blocks_64x64x16_70_01"
+VALID_EXTENSIONS = [".tif"] # Valid image extensions
+VALID_BLOCK_NAMES = ["block-001"] # Valid blocks in image names (blocks)
 
 # Hyperparameters for simulation
 nparticles = 1000   # Number of particles
@@ -56,7 +58,7 @@ models_params = {
 
 def main():
 
-    print(f"Retrain: {RETRAIN}\nReal Data: {REAL_DATA}\nReal Data Path: {REAL_DATA_PATH}\nOutput Directory: {OUTPUT_DIR}\n")
+    print(f"Retrain: {RETRAIN}\nReal Data: {REAL_DATA}\nReal Data Path: {REAL_DATA_PATH}\nOutput Directory: {OUTPUT_DIR}\nValid Extensions: {VALID_EXTENSIONS}\nValid Block Names: {VALID_BLOCK_NAMES}\n")
     print(f"Models: {list(models_params.keys())}\n")
 
     print("Loading models and losses")
@@ -77,9 +79,10 @@ def main():
     # print predictions
     if REAL_DATA: 
         print("Predicting on real images, only using the resNet2D model:\n(that can be changed inside the load_real_images_and_predict function inside the run.py file)")
-        load_real_images_and_predict()
+        images_paths = find_real_images(REAL_DATA_PATH)
+        predict_on_real_images(images_paths=images_paths)
         print("Plotting real images:")
-        load_and_plot_real_images()
+        plot_real_images(images_paths=images_paths)
     
     #print("Plotting results:")
     # Plot the generated D values
@@ -239,24 +242,40 @@ def plot_generated_Ds(allGeneratedDs, output_name="all_generated_Ds.svg"):
     if output_path: plt.savefig(output_path)
     plt.show()
 
-def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01", output_name="resNet2D_predictions"): #"predictions.npy"
-    
+def find_real_images(folder_path = "real-data/blocks_64x64x16_70_01"):
     # Get a list of all files in the folder
-    file_list = sorted(os.listdir(folder_path))  # Sorted lexicographically
+    #file_list = sorted(os.listdir(folder_path))  # Sorted lexicographically
 
     # Filter only files with valid image extensions and specific naming pattern
-    valid_extensions = (".tif")
-    image_files = [f for f in file_list if f.endswith(valid_extensions) and f.startswith("block-001")]
+    
+    print("Loading only images with the extension(s)", VALID_EXTENSIONS, "and that start with", VALID_BLOCK_NAMES)
+    #images_paths = [f for f in file_list if f.endswith(valid_extensions) and f.startswith("block-001")]
+
+    images_paths = []
+
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            if file.endswith(tuple(VALID_EXTENSIONS)) and file.startswith(tuple(VALID_BLOCK_NAMES)):
+                images_paths.append(os.path.join(root, file))
+
+    # sorting the images
+    images_paths.sort()
+
+    print("Found", len(images_paths), "images with the specified extension and naming pattern")
+
+    return images_paths
+
+def predict_on_real_images(images_paths: list , output_name="resNet2D_predictions"): #"predictions.npy"
 
     # Initialize an empty list for predictions
-    predictions = []
+    predictions = [] 
     results = {}
 
     params = models_params["resNet2D"]
 
     # Process each .tif file
-    for file in image_files:
-        image_path = os.path.join(folder_path, file)
+    for image_path in images_paths:
+        #image_path = os.path.join(folder_path, file)
         
         # Open the .tif file and load all 16 frames
         with Image.open(image_path) as img:
@@ -275,7 +294,8 @@ def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01"
         model_preds_cpu = model_preds.cpu().numpy()
         predictions.append(model_preds_cpu)
         #print(f"Predictions for {file}:", model_preds_cpu)
-        results[file] = model_preds_cpu.tolist()
+        filename = os.path.basename(image_path)
+        results[filename] = model_preds_cpu.tolist()
 
     # Convert predictions to a NumPy array for further processing or saving
     predictions = np.array(predictions)
@@ -293,23 +313,16 @@ def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01"
         print(f"Filenames mapped to predictions saved to {output_path}.json")
 
 
-def load_and_plot_real_images(folder_path = "real-data/blocks_64x64x16_70_01", output_name="real_images.svg"):
-
-    # Get a list of all files in the folder
-    file_list = sorted(os.listdir(folder_path))  # Sorted lexicographically
-
-    # Filter only files with valid image extensions (e.g., .tif, .jpg, .png)
-    valid_extensions = (".tif")
-    image_files = [f for f in file_list if f.endswith(valid_extensions) and f.startswith("block-001")]
+def plot_real_images(images_paths: list, output_name="real_images.svg"):
 
     # Read all images and determine global min and max intensity
     images = []
     global_min = float("inf")
     global_max = float("-inf")
 
-    for file in image_files:
+    for image_path in images_paths:
 
-        image_path = os.path.join(folder_path, file)
+        #image_path = os.path.join(folder_path, file)
         image = Image.open(image_path)
         image_array = np.array(image)/10000
         images.append(image_array)
