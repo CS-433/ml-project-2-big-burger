@@ -12,4 +12,4 @@ COPY . /app
 
 RUN pip3 install -r requirements.txt
 
-ENTRYPOINT ["python", "run.py"]
+ENTRYPOINT ["python3", "run.py"]
