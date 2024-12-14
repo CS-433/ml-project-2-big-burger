@@ -48,15 +48,16 @@ lr = 0.000001
 models_params = {
     #"simpleCNN": {"class": SimpleCNN, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
     "resNet2D": {"class": ResNet2D, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
-    #"resNet3D": {"class": ResNet3D, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
+    "resNet3D": {"class": ResNet3D, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
     #"paperCNNAdam": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
-    #"paperCNNSGD": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "sgd", "lr" :lr},
+    "paperCNNSGD": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "sgd", "lr" :lr},
     #"paperCNNNoPool": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" :lr}
 }
 
 def main():
 
     print(f"Retrain: {RETRAIN}\nReal Data: {REAL_DATA}\nReal Data Path: {REAL_DATA_PATH}\nOutput Directory: {OUTPUT_DIR}\n")
+    print(f"Models: {list(models_params.keys())}\n")
 
     print("Loading models and losses")
     # Load the validation images
@@ -75,7 +76,7 @@ def main():
     
     # print predictions
     if REAL_DATA: 
-        print("Predicting on real images:")
+        print("Predicting on real images, only using the resNet2D model:\n(that can be changed inside the load_real_images_and_predict function inside the run.py file)")
         load_real_images_and_predict()
         print("Plotting real images:")
         load_and_plot_real_images()
@@ -240,7 +241,7 @@ def plot_generated_Ds(allGeneratedDs, output_name="all_generated_Ds.svg"):
     if output_path: plt.savefig(output_path)
     plt.show()
 
-def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01", output_name="predictions"): #"predictions.npy"
+def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01", output_name="resNet2D_predictions"): #"predictions.npy"
     
     # Get a list of all files in the folder
     file_list = sorted(os.listdir(folder_path))  # Sorted lexicographically
