@@ -9,6 +9,7 @@ import os.path
 import os
 import numpy as np
 from PIL import Image
+import json
 
 RETRAIN = False
 # directory with weigths, losses, and plots
@@ -47,13 +48,16 @@ lr = 0.000001
 models_params = {
     #"simpleCNN": {"class": SimpleCNN, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
     "resNet2D": {"class": ResNet2D, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
-    "resNet3D": {"class": ResNet3D, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
-    "paperCNNAdam": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
-    "paperCNNSGD": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "sgd", "lr" :lr},
-    "paperCNNNoPool": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" :lr}
+    #"resNet3D": {"class": ResNet3D, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
+    #"paperCNNAdam": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" : lr},
+    #"paperCNNSGD": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "sgd", "lr" :lr},
+    #"paperCNNNoPool": {"class": PaperCnn, "train_fct": train_model, "loaded_model": None, "criterion": nn.MSELoss(), "optimizer" : "adam", "lr" :lr}
 }
 
 def main():
+
+    print(f"Retrain: {RETRAIN}\nReal Data: {REAL_DATA}\nReal Data Path: {REAL_DATA_PATH}\nOutput Directory: {OUTPUT_DIR}\n")
+
     print("Loading models and losses")
     # Load the validation images
     val_images, valDs = load_validation_images()
@@ -71,12 +75,12 @@ def main():
     
     # print predictions
     if REAL_DATA: 
-        print("Predicting real data:")
+        print("Predicting on real images:")
         load_real_images_and_predict()
         print("Plotting real images:")
         load_and_plot_real_images()
     
-    print("Plotting results:")
+    #print("Plotting results:")
     # Plot the generated D values
     print("Plotting generated D values")
     plot_generated_Ds(allGeneratedDs)
@@ -85,13 +89,13 @@ def main():
         print("Plotting losses")
         plot_losses(tr_loss_histories, totalEpochs)
     # Plot the true vs predicted D values
-    print("Plotting true vs predicted D values")
+    #print("Plotting true vs predicted D values")
 
     # DOES NOT WORK
     #coarseD_array, valDs_array =  plot_trueVpredicted_Dvalues(val_images, valDs)
 
     # Plot the true vs predicted D values with absolute error
-    print("Plotting true vs predicted D values with absolute error")
+    #print("Plotting true vs predicted D values with absolute error")
     #plot_trueVpredicted_Dvalues_absolute_error(coarseD_array, valDs_array, val_images)
     # Save the models, validation losses, and generated D values
 
@@ -236,9 +240,7 @@ def plot_generated_Ds(allGeneratedDs, output_name="all_generated_Ds.svg"):
     if output_path: plt.savefig(output_path)
     plt.show()
 
-def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01", output_name="predictions.npy"): #"predictions.npy"
-
-    output_path = os.path.join(OUTPUT_DIR, output_name) if output_name else None
+def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01", output_name="predictions"): #"predictions.npy"
     
     # Get a list of all files in the folder
     file_list = sorted(os.listdir(folder_path))  # Sorted lexicographically
@@ -249,6 +251,7 @@ def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01"
 
     # Initialize an empty list for predictions
     predictions = []
+    results = {}
 
     params = models_params["resNet2D"]
 
@@ -272,6 +275,8 @@ def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01"
         model_preds = predict_diffusion_coefficients(model, val_images, device)
         model_preds_cpu = model_preds.cpu().numpy()
         predictions.append(model_preds_cpu)
+        #print(f"Predictions for {file}:", model_preds_cpu)
+        results[file] = model_preds_cpu.tolist()
 
     # Convert predictions to a NumPy array for further processing or saving
     predictions = np.array(predictions)
@@ -281,7 +286,12 @@ def load_real_images_and_predict(folder_path = "real-data/blocks_64x64x16_70_01"
     print(predictions)
 
     # Save predictions if needed
-    if output_path: np.save(output_path, predictions)
+    if output_name: 
+        output_path = os.path.join(OUTPUT_DIR, os.path.splitext(output_name)[0])
+        np.save(output_path + ".npy", predictions)
+        print(f"Predictions saved to {output_path}.npy")
+        json.dump(results, open(output_path + ".json", 'w'), indent=4)
+        print(f"Filenames mapped to predictions saved to {output_path}.json")
 
 
 def load_and_plot_real_images(folder_path = "real-data/blocks_64x64x16_70_01", output_name="real_images.svg"):
