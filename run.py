@@ -122,8 +122,11 @@ def find_real_images(folder_path = "real-data/blocks_64x64x16_70_01"):
 
     for root, _, files in os.walk(folder_path):
         for file in files:
-            if file.endswith(tuple(VALID_EXTENSIONS)) and file.startswith(tuple(VALID_BLOCK_NAMES)):
-                images_paths.append(os.path.join(root, file))
+            if file.endswith(tuple(VALID_EXTENSIONS)):
+                if VALID_BLOCK_NAMES == "all":
+                    images_paths.append(os.path.join(root, file))
+                elif file.startswith(tuple(VALID_BLOCK_NAMES)):
+                    images_paths.append(os.path.join(root, file))
 
     # sorting the images
     images_paths.sort()
@@ -224,11 +227,15 @@ def plot_real_images(images_paths: list, output_name="real_images.svg"):
 if __name__ == "__main__":
 
     argparser = argparse.ArgumentParser()
-    argparser.add_argument("-r", "--real_data_path", type=str, default=None, help="Path to the real data")
+    argparser.add_argument("-r", "--real_data_path", type=str, default=None, help=f"Path to the real data, default is {REAL_DATA_PATH}")
+    argparser.add_argument("-a", "--all", action="store_true", help=f"Run the model on all blocks inside the real data path, default is {VALID_BLOCK_NAMES}")
 
     args = argparser.parse_args()
     if args.real_data_path:
         REAL_DATA_PATH = args.real_data_path
         print(f"Real Data Path changed to {REAL_DATA_PATH}")
+    if args.all:
+        VALID_BLOCK_NAMES = "all"
+        print("Running the model on all blocks in the real data path")
 
     main()

@@ -615,7 +615,7 @@ def plots(output_name="image_frames.svg"):
 if __name__ == "__main__":
 
     argparser = argparse.ArgumentParser()
-    argparser.add_argument("-r", "--real_data_path", type=str, default=None, help="Path to the real data")
+    argparser.add_argument("-r", "--real_data_path", type=str, default=None, help=f"Path to the real data, default is {REAL_DATA_PATH}")
 
     args = argparser.parse_args()
     if args.real_data_path:
