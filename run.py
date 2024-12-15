@@ -19,7 +19,6 @@ VALID_BLOCK_NAMES = ["block-001"] # Valid blocks in image names (blocks)
 REAL_DATA_MODEL = "resNet2D" # see models_params below for available models
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
 
 # Models used in a dictionnary comprehension. 
 # To add  a new model, simply add it to the list with the wanted train fct
@@ -37,7 +36,8 @@ models_params = {
 def main():
 
     print(f"Output Directory: {OUTPUT_DIR}\nReal Data Path: {REAL_DATA_PATH}\nValid Extensions: {VALID_EXTENSIONS}\nValid Block Names: {VALID_BLOCK_NAMES}\nReal Data Model: {REAL_DATA_MODEL}\n")
-    print(f"Models: {list(models_params.keys())}\n")
+    print(f"Models: {list(models_params.keys())}")
+    print(f"Using device: {device}\n")
 
     print("Loading losses")
     # Load the losses
