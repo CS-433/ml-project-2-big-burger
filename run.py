@@ -63,7 +63,7 @@ def load_models() -> dict:
         class_ = params["class"]
         # Load the model weights
         loaded_model = class_().to(device)
-        filename = "w_" + name + ".pth"
+        filename = "modelsData/w_" + name + ".pth"
         filepath = os.path.join(OUTPUT_DIR, filename)
         if os.path.exists(filepath):
             loaded_model = load_model_weights(loaded_model, filepath)
@@ -90,7 +90,7 @@ def load_loss_history() -> dict:
 
     for name, params in models_params.items():
 
-        filename = "l_" + name + ".npy"
+        filename = "modelsData/l_" + name + ".npy"
         filepath = os.path.join(OUTPUT_DIR, filename)
         if os.path.exists(filepath):
             val_loss_histories[name] = np.load(filepath)
@@ -100,7 +100,7 @@ def load_loss_history() -> dict:
             print(name, "Did not find losses, loaded an empty array")
             val_loss_histories[name] = np.array([])
 
-    ds = "allDs.npy"
+    ds = "modelsData/allDs.npy"
     if os.path.exists(ds):
         allGeneratedDs = np.load(ds)
     else:
