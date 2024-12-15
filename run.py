@@ -1,10 +1,10 @@
 from helpers import *
-from modelsUtils import *
-from simpleCNNModel import *
-from ResNetModel2D import *
-from ResNetModel3D import *
-from paperCNN import *
-from paperCNNNoPooling import *
+from Models.modelsUtils import *
+from Models.simpleCNNModel import *
+from Models.ResNetModel2D import *
+from Models.ResNetModel3D import *
+from Models.paperCNN import *
+from Models.paperCNNNoPooling import *
 import os.path
 import os
 import numpy as np
