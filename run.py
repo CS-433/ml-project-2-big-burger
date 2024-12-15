@@ -18,6 +18,7 @@ REAL_DATA = True
 REAL_DATA_PATH = "real-data/blocks_64x64x16_70_01"
 VALID_EXTENSIONS = [".tif"] # Valid image extensions
 VALID_BLOCK_NAMES = ["block-001"] # Valid blocks in image names (blocks)
+REAL_DATA_MODEL = "resNet2D"
 
 # Hyperparameters for simulation
 nparticles = 1000   # Number of particles
@@ -58,7 +59,7 @@ models_params = {
 
 def main():
 
-    print(f"Retrain: {RETRAIN}\nReal Data: {REAL_DATA}\nReal Data Path: {REAL_DATA_PATH}\nOutput Directory: {OUTPUT_DIR}\nValid Extensions: {VALID_EXTENSIONS}\nValid Block Names: {VALID_BLOCK_NAMES}\n")
+    print(f"Retrain: {RETRAIN}\nOutput Directory: {OUTPUT_DIR}\nReal Data: {REAL_DATA}\nReal Data Path: {REAL_DATA_PATH}\nValid Extensions: {VALID_EXTENSIONS}\nValid Block Names: {VALID_BLOCK_NAMES}\nReal Data Model: {REAL_DATA_MODEL}\n")
     print(f"Models: {list(models_params.keys())}\n")
 
     print("Loading models and losses")
@@ -78,7 +79,7 @@ def main():
     
     # print predictions
     if REAL_DATA: 
-        print("Predicting on real images, only using the resNet2D model:\n(that can be changed inside the load_real_images_and_predict function inside the run.py file)")
+        print(f"Predicting on real images, only using the {REAL_DATA_MODEL} model:\n(that can be changed inside the load_real_images_and_predict function inside the run.py file)")
         images_paths = find_real_images(REAL_DATA_PATH)
         predict_on_real_images(images_paths=images_paths)
         print("Plotting real images:")
@@ -265,13 +266,13 @@ def find_real_images(folder_path = "real-data/blocks_64x64x16_70_01"):
 
     return images_paths
 
-def predict_on_real_images(images_paths: list , output_name="resNet2D_predictions"): #"predictions.npy"
+def predict_on_real_images(images_paths: list , output_name="predictions"): #"predictions.npy"
 
     # Initialize an empty list for predictions
     predictions = [] 
     results = {}
 
-    params = models_params["resNet2D"]
+    params = models_params[REAL_DATA_MODEL]
 
     # Process each .tif file
     for image_path in images_paths:
@@ -306,7 +307,7 @@ def predict_on_real_images(images_paths: list , output_name="resNet2D_prediction
 
     # Save predictions if needed
     if output_name: 
-        output_path = os.path.join(OUTPUT_DIR, os.path.splitext(output_name)[0])
+        output_path = os.path.join(OUTPUT_DIR, REAL_DATA_MODEL + "_" + os.path.splitext(output_name)[0])
         np.save(output_path + ".npy", predictions)
         print(f"Predictions saved to {output_path}.npy")
         json.dump(results, open(output_path + ".json", 'w'), indent=4)
