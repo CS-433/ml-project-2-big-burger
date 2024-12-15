@@ -18,7 +18,7 @@ REAL_DATA = True
 REAL_DATA_PATH = "real-data/blocks_64x64x16_70_01"
 VALID_EXTENSIONS = [".tif"] # Valid image extensions
 VALID_BLOCK_NAMES = ["block-001"] # Valid blocks in image names (blocks)
-REAL_DATA_MODEL = "resNet2D"
+REAL_DATA_MODEL = "resNet2D" # see models_params below for available models
 
 # Hyperparameters for simulation
 nparticles = 1000   # Number of particles
