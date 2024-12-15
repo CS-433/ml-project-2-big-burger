@@ -233,6 +233,9 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     if args.real_data_path:
         REAL_DATA_PATH = args.real_data_path
+
+        assert os.path.exists(REAL_DATA_PATH), f"Path {REAL_DATA_PATH} does not exist"
+
         print(f"Real Data Path changed to {REAL_DATA_PATH}")
     if args.all:
         VALID_BLOCK_NAMES = "all"
