@@ -11,10 +11,9 @@ import numpy as np
 from PIL import Image
 import json
 
-RETRAIN = False
-# directory with weigths, losses, and plots
-OUTPUT_DIR = "run_outputs/"
-REAL_DATA = True
+RETRAIN = False # Set to True to retrain the models, False to load existing models
+OUTPUT_DIR = "run_outputs/" # directory with weigths, losses, and plots
+REAL_DATA = True # Set to True to predict on real images, False to skip
 REAL_DATA_PATH = "real-data/blocks_64x64x16_70_01"
 VALID_EXTENSIONS = [".tif"] # Valid image extensions
 VALID_BLOCK_NAMES = ["block-001"] # Valid blocks in image names (blocks)
@@ -173,6 +172,7 @@ def generate_images_and_train(val_images, valDs, val_loss_histories, tr_loss_his
     epochs = 1
     N = 16 # Number of samples per iteration
     verbose = False # print in console
+    allGeneratedDs = np.array([]) # store all generated Ds
     for i in range(epochs):
 
         print(f"Generating images for iteration: {i}")
