@@ -406,7 +406,7 @@ def generateImagesAndEstimateD(
     return image_array, D_estimates
 
 def generateImagesAndEstimateDFromTrajs(trajectories,
-    nparticles, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
+    nIndex,nImagesPerIndex, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
     flux, background, poisson_noise, gaussian_noise, normalizeValue=-1):
     """
     Generates the full pipeline of images and estimates the diffusion coefficient (D) for each particle.
@@ -431,6 +431,10 @@ def generateImagesAndEstimateDFromTrajs(trajectories,
                              containing the simulated noisy images.
     - D_estimates (ndarray): Array of size (nparticles) with estimated diffusion coefficients.
     """
+
+    nparticles = nIndex * nImagesPerIndex
+    trajectories = trajectories.reshape(nparticles, nframes*nposframe, 2)
+
     image_array = np.zeros((nparticles, nframes, npixel, npixel))
     D_estimates = np.zeros(nparticles)
     time_range = np.arange(nframes * nposframe) * dt / nposframe
@@ -810,7 +814,7 @@ def fit_gaussian_to_image(img):
     offset_guess = np.median(img)
 
     initial_guess = (amplitude_guess, x0_guess, y0_guess, sigma_x_guess, sigma_y_guess, theta_guess, offset_guess)
-    popt, _ = curve_fit(two_d_gaussian, (x, y), img.ravel(), p0=initial_guess, maxfev=2000)
+    popt, _ = curve_fit(two_d_gaussian, (x, y), img.ravel(), p0=initial_guess, maxfev=50000)
     x0, y0 = popt[1], popt[2]
     return x0, y0
 
