@@ -171,15 +171,46 @@ def add_noise_background(image, background, poisson_noise, gaussian_noise, norma
 
 
 def plot1ParticleTrajectory(trajectory, nframes, D):
-
+    """
+    Plots the trajectory of a particle, coloring each frame differently 
+    and labeling each frame with its number.
+    
+    Parameters:
+    - trajectory: np.ndarray of shape (N, 2), where N is the total number of points.
+                  Each row represents the (x, y) coordinates of the particle.
+    - nframes: int, number of frames to divide the trajectory into.
+    - D: float, diffusion coefficient for annotation.
+    """
     plt.figure(figsize=(6, 6))
+    
+    # Calculate points per frame
+    points_per_frame = len(trajectory) // nframes
+    
+    # Plot trajectory segments with frame labels
     for f in range(nframes):
         start =  f*nframes
         end = (f+1)* nframes + ( 1 if f != nframes-1 else 0)
-        #print(start,end)
-        plt.plot(trajectory[start:end, 0], trajectory[start:end, 1], lw=1, label=f'Frame {f}')
         
-    show_plt(plt, f'Brownian Motion of 1 Particle with D={D}')
+        # Plot each frame's trajectory in a different color
+        plt.plot(
+            trajectory[start:end, 0], 
+            -trajectory[start:end, 1], 
+            lw=1, 
+            label=f'Frame {f + 1}'  # Frames start from 1
+        )
+    
+    # Add legend and axis labels
+    plt.legend(loc="best", fontsize=8)
+    plt.title(f'Brownian Motion of 1 Particle with D={D}')
+    plt.xlabel('X Position')
+    plt.ylabel('Y Position')
+    plt.grid(True)
+    plt.axis('equal')  # Equal scaling for x and y axes
+    
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
+
 
 
 
@@ -506,32 +537,54 @@ def load_image(filename):
     return image
 
 import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.pyplot as plt
 
 def plot_image_frames(image, title="Image Frames", output_path=None):
     """
-    Plot all 8 frames of an image in a 2x4 grid.
+    Plot all frames of an image in a grid layout.
+    The layout depends on the number of frames:
+    - 4 frames: 1 row of 4 columns.
+    - 8 frames: 2 rows of 4 columns.
+    - 16 frames: 4 rows of 4 columns.
     
     Parameters:
-    - image: A numpy array of shape (8, 64, 64).
+    - image: A numpy array of shape (N, 64, 64), where N is 4, 8, or 16.
     - title: Title for the entire plot (optional).
+    - output_path: File path to save the plot (optional).
     """
-    if image.shape != (8, 64, 64):
-        raise ValueError("Image must have shape (8, 64, 64)")
+    n_frames = image.shape[0]
+    if n_frames not in {4, 8, 16}:
+        raise ValueError("Image must have 4, 8, or 16 frames.")
 
-    # Create a 2x4 grid for plotting
-    fig, axes = plt.subplots(2, 4, figsize=(12, 6))
+    # Determine grid layout based on the number of frames (rows of 4 images)
+    ncols = 4
+    nrows = (n_frames + ncols - 1) // ncols  # Calculate rows needed for 4 columns
+
+    # Create the grid for plotting
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3 * ncols, 3 * nrows))
     fig.suptitle(title, fontsize=16)
-    
+
+    # Flatten axes to simplify indexing
+    axes = axes.flatten()
+
     # Plot each frame
-    for i in range(8):
-        ax = axes[i // 4, i % 4]  # Determine subplot position
-        ax.imshow(image[i], cmap="gray",vmin=0,vmax=1, interpolation="nearest")
+    for i in range(n_frames):
+        ax = axes[i]
+        ax.imshow(image[i], cmap="gray", vmin=0, vmax=1, interpolation="nearest")
         ax.set_title(f"Frame {i+1}")
-        ax.axis("off")  # Hide axes for better visualization
-    
+        ax.axis("off")
+
+    # Hide any unused subplots
+    for j in range(n_frames, len(axes)):
+        axes[j].axis("off")
+
     plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to include the title
-    if output_path: plt.savefig(output_path)
+    if output_path:
+        plt.savefig(output_path)
     plt.show()
+
+
 
 def plot_image_frames16(image, title="Image Frames"):
     """
@@ -882,3 +935,22 @@ def compute_coarseD_for_batch(images_batch, dt):
     
     # Convert the list of coarse D values to a NumPy array
     return np.array(coarseD_values)
+
+
+def moving_average(array, window_size=25):
+    """
+    Computes the moving average of a NumPy array.
+    
+    Parameters:
+        array (np.ndarray): The input array.
+        window_size (int): The size of the moving average window (default is 10).
+    
+    Returns:
+        np.ndarray: The smoothed array with the moving average applied.
+    """
+    if window_size < 1:
+        raise ValueError("Window size must be at least 1.")
+    if window_size > len(array):
+        raise ValueError("Window size cannot be larger than the array length.")
+    
+    return np.convolve(array, np.ones(window_size) / window_size, mode='same')

@@ -183,3 +183,23 @@ def predict_with_rotations(model, images, device):
     averaged_Ds = torch.mean(rotated_predictions, dim=0)  # Shape: (N, 1)
     
     return averaged_Ds.squeeze(), rotated_predictions  # Return as a list
+
+def average_predictions(predictions, group_size=5):
+    """
+    Averages predictions in groups of `group_size`.
+
+    Parameters:
+    - predictions (torch.Tensor): Input tensor of shape (n * group_size,).
+    - group_size (int): The number of elements to average in each group. Default is 5.
+
+    Returns:
+    - torch.Tensor: Tensor of shape (n,) where each element is the average of a group of `group_size` elements.
+    """
+    if predictions.numel() % group_size != 0:
+        raise ValueError(f"The input tensor size {predictions.numel()} must be divisible by the group size {group_size}.")
+    
+    # Reshape to group elements for averaging
+    grouped = predictions.view(-1, group_size)
+    # Compute the mean along the group dimension
+    averaged = grouped.mean(dim=1)
+    return averaged
