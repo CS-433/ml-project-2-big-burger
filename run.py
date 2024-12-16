@@ -15,7 +15,10 @@ import argparse
 OUTPUT_DIR = "run_outputs/" # directory with weigths, losses, and plots
 REAL_DATA_PATH = "real-data/blocks_64x64x16_70_01"
 VALID_EXTENSIONS = [".tif"] # Valid image extensions
-VALID_BLOCK_NAMES = ["block-001"] # Valid blocks in image names (blocks)
+# Valid blocks in image names (blocks)
+# can add others or define it as "all" to allow all blocks
+# e.g. ["block-001", "block-002"] or "all"
+VALID_BLOCK_NAMES = ["block-001"] 
 REAL_DATA_MODEL = "resNet2D" # see models_params below for available models
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
@@ -56,15 +59,13 @@ def main():
 
 
 def load_models() -> dict:
-    """
-    Load the models from the models_params dictionary"""
+    """Load the models from the modelsData/ folder and store them in the models_params dictionary"""
 
     for name, params in models_params.items():
         class_ = params["class"]
         # Load the model weights
         loaded_model = class_().to(device)
-        filename = "w_" + name + ".pth"
-        filepath = os.path.join(OUTPUT_DIR, filename)
+        filepath = "modelsData/w_" + name + ".pth"
         if os.path.exists(filepath):
             loaded_model = load_model_weights(loaded_model, filepath)
             print(name, "Loaded existing weights")
@@ -84,14 +85,15 @@ def load_models() -> dict:
     return models_params
 
 def load_loss_history() -> dict:
+    """similar to load_models, prepare the loss history for the models"""
+
     totalEpochs = 0
     tr_loss_histories = {name: [] for name in models_params.keys()}
     val_loss_histories = {}
 
-    for name, params in models_params.items():
+    for name, _ in models_params.items():
 
-        filename = "l_" + name + ".npy"
-        filepath = os.path.join(OUTPUT_DIR, filename)
+        filepath = "modelsData/l_" + name + ".npy"
         if os.path.exists(filepath):
             val_loss_histories[name] = np.load(filepath)
             print(name, "Loaded existing losses")
@@ -110,19 +112,17 @@ def load_loss_history() -> dict:
 
 
 def find_real_images(folder_path = "real-data/blocks_64x64x16_70_01"):
-    # Get a list of all files in the folder
-    #file_list = sorted(os.listdir(folder_path))  # Sorted lexicographically
-
-    # Filter only files with valid image extensions and specific naming pattern
+    """Finds all the real images in the folder path"""
     
     print("Loading only images with the extension(s)", VALID_EXTENSIONS, "and that start with", VALID_BLOCK_NAMES)
-    #images_paths = [f for f in file_list if f.endswith(valid_extensions) and f.startswith("block-001")]
 
     images_paths = []
 
+    # Recursively search for images in the folder
     for root, _, files in os.walk(folder_path):
         for file in files:
             if file.endswith(tuple(VALID_EXTENSIONS)):
+                # Check if the file name starts with the valid block names or if all blocks are allowed
                 if VALID_BLOCK_NAMES == "all":
                     images_paths.append(os.path.join(root, file))
                 elif file.startswith(tuple(VALID_BLOCK_NAMES)):
@@ -136,15 +136,18 @@ def find_real_images(folder_path = "real-data/blocks_64x64x16_70_01"):
     return images_paths
 
 def real_images_normalization(image):
+    """used to normalize the real images to the same scale as the generated images"""    
     return np.array(image) / 18000
 
 def real_images_normalization_daniel(image):
+    """alternative normalization function, not used in the code, does not work as well as the previous one"""
     image = np.array(image, dtype=np.float32)
     image -= 300
     image /= 10000
     return np.clip(image, 0, 1)
 
-def predict_on_real_images(images_paths: list , output_name="predictions"): #"predictions.npy"
+def predict_on_real_images(images_paths: list , output_name="predictions"): 
+    """predicts the diffusion coefficients on the real images"""
 
     # Initialize an empty list for predictions
     predictions = [] 
@@ -154,7 +157,6 @@ def predict_on_real_images(images_paths: list , output_name="predictions"): #"pr
 
     # Process each .tif file
     for image_path in images_paths:
-        #image_path = os.path.join(folder_path, file)
         
         # Open the .tif file and load all 16 frames
         with Image.open(image_path) as img:
@@ -174,7 +176,7 @@ def predict_on_real_images(images_paths: list , output_name="predictions"): #"pr
         model_preds = predict_diffusion_coefficients(model, val_images, device)
         model_preds_cpu = model_preds.cpu().numpy()
         predictions.append(model_preds_cpu)
-        #print(f"Predictions for {file}:", model_preds_cpu)
+
         filename = os.path.basename(image_path)
         results[filename] = model_preds_cpu.tolist()
 
@@ -202,6 +204,7 @@ def predict_on_real_images(images_paths: list , output_name="predictions"): #"pr
 
 
 def plot_real_images(images_paths: list, output_name="real_images.svg"):
+    """Plots the real images"""
 
     # Read all images and determine global min and max intensity
     images = []
@@ -221,6 +224,9 @@ def plot_real_images(images_paths: list, output_name="real_images.svg"):
     num_images = min(16, len(images))  # Ensure we don't exceed 16 images
     rows, cols = 2, 8  # 2 rows, 8 images per row
     plt.figure(figsize=(20, 8))
+    plt.axis("off")
+    plt.title(f"First {num_images} Real Images from \n{REAL_DATA_PATH}")
+    plt.tight_layout()
 
     for i in range(num_images):
         plt.subplot(rows, cols, i + 1)
@@ -228,7 +234,6 @@ def plot_real_images(images_paths: list, output_name="real_images.svg"):
         plt.title(f"Image {i+1}")
         plt.axis("off")
 
-    plt.tight_layout()
     if output_name: plt.savefig(os.path.join(OUTPUT_DIR, output_name))
     plt.show()
 
@@ -237,14 +242,18 @@ def plot_real_images(images_paths: list, output_name="real_images.svg"):
 
 if __name__ == "__main__":
 
+    # Parse the CLI arguments
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-r", "--real_data_path", type=str, default=None, help=f"Path to the real data, default is {REAL_DATA_PATH}")
     argparser.add_argument("-a", "--all", action="store_true", help=f"Run the model on all blocks inside the real data path, default is {VALID_BLOCK_NAMES}")
 
     args = argparser.parse_args()
+
+    # Update the global variables if the CLI arguments are provided
     if args.real_data_path:
         REAL_DATA_PATH = args.real_data_path
 
+        # input sanitization: check if the path exists
         assert os.path.exists(REAL_DATA_PATH), f"Path {REAL_DATA_PATH} does not exist"
 
         print(f"Real Data Path changed to {REAL_DATA_PATH}")
