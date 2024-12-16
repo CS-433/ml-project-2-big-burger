@@ -63,7 +63,7 @@ def load_models() -> dict:
         class_ = params["class"]
         # Load the model weights
         loaded_model = class_().to(device)
-        filename = "modelsData/w_" + name + ".pth"
+        filename = "w_" + name + ".pth"
         filepath = os.path.join(OUTPUT_DIR, filename)
         if os.path.exists(filepath):
             loaded_model = load_model_weights(loaded_model, filepath)
@@ -90,7 +90,7 @@ def load_loss_history() -> dict:
 
     for name, params in models_params.items():
 
-        filename = "modelsData/l_" + name + ".npy"
+        filename = "l_" + name + ".npy"
         filepath = os.path.join(OUTPUT_DIR, filename)
         if os.path.exists(filepath):
             val_loss_histories[name] = np.load(filepath)
