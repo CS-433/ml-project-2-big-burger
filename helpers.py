@@ -735,7 +735,8 @@ def _generate_trajectory(args):
     positions = np.cumsum(dxy, axis=0)
 
     # if the trajectory is out of the frame, we redo the trajectory
-    if np.any(np.abs(positions) > 1): 
+    # change this magic numbers to pixelsize * nbrPixels
+    if np.any(np.abs(positions) > 100 * 64): 
         return _generate_trajectory(args)
 
     return positions
