@@ -135,6 +135,15 @@ def find_real_images(folder_path = "real-data/blocks_64x64x16_70_01"):
 
     return images_paths
 
+def real_images_normalization(image):
+    return np.array(image) / 18000
+
+def real_images_normalization_daniel(image):
+    image = np.array(image, dtype=np.float32)
+    image -= 300
+    image /= 10000
+    return np.clip(image, 0, 1)
+
 def predict_on_real_images(images_paths: list , output_name="predictions"): #"predictions.npy"
 
     # Initialize an empty list for predictions
