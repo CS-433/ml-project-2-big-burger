@@ -161,7 +161,9 @@ def predict_on_real_images(images_paths: list , output_name="predictions"): #"pr
             frames = []
             for i in range(16):  # Assuming each .tif file has exactly 16 frames
                 img.seek(i)  # Access frame i
-                frame_array = np.array(img) / 18000  # Normalize by 18000
+
+                frame_array = real_images_normalization(img)
+                
                 frames.append(frame_array)
         
         # Convert frames to a NumPy array of shape (16, 64, 64)
