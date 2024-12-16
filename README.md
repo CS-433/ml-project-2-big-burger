@@ -22,6 +22,10 @@ Flux: 10 photons/ms
 Amplitude of diraqs: Flux * delta_t /Interframe positions  
 PSF (Point Spread function): start with Gaussian, then use specified one 
 
+## Reprducibility
+
+In order to make this project reproducible, we included a `requirements.txt` file regrouping all python libraries we used, along with their versions. To install them, it is recommended to do so in a virtual environment; to create one, `python3 -m venv venv_name` is a useful command. After activating it, type `pip install -r requirements.txt` to install the libraries.
+If this doesn't work, we also included a `Dockerfile`, which can be used to create a Docker Image to containerize the application. It is longer to set up but should work on all computers.
 
 
 ### Output Images:  
