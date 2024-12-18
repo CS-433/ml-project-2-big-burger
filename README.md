@@ -11,7 +11,8 @@ The project was thanks to ML4Science initiative in the EPFL Center for Imaging, 
 ## ML for science project description (by Daniel Sage):
 Single-Molecule Localization Microscopy (Nobel Prize 2014) is a powerful super-resolution technique for imaging live cell compartments with a resolution of up to 15 nm. In these images, a single moving molecule appears as a bright "blob," primarily due to motion blur. By analyzing the shape of this blob, we can gain insights into cellular dynamics, specifically by estimating the diffusion coefficient (D) of the molecule.
 The goal of this project is to train a deep learning model to predict the diffusion coefficient (D) from a sequence of simulated images. These simulations can faithfully mimic real conditions, thanks to a well-known physical model that incorporates the Brownian motion of the molecule, the microscopy point-spread function, and the noise, allowing us to generate large datasets. We will investigate different neural network architectures to determine which one is most effective for estimating the diffusion coefficient from the sequence of images. Ultimately, we aim to replicate microscopy experimental conditions to apply this model to real images.
- 
+
+This project was done thanks to the EPFL Center for Imaging, which gave us reference papers and prior research done on this subject. All of those can be found in folder references/
 
 ## Project structure:
 
@@ -51,6 +52,7 @@ All models used are in folder Models/ and the data saved/loaded in the notebook 
 Finally, the models can be used to predict the Diffusion Coefficient of Real data, not seen during Training. This is done in notebook RealDataPrediction. This can be used to perform real data prediction on new samples stored in folder real-data/, but requires knowing the data distribution and the Normalization factor needed. 
 
 A folder blur_optimization in which we try to optimize the similarity between real data and simulated data is also present.
+
 
 ## Reproducibility
 
