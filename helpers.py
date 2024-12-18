@@ -188,8 +188,8 @@ def plot1ParticleTrajectory(trajectory, nframes, D):
     
     # Plot trajectory segments with frame labels
     for f in range(nframes):
-        start =  f*nframes
-        end = (f+1)* nframes + ( 1 if f != nframes-1 else 0)
+        start = f * points_per_frame
+        end = (f + 1) * points_per_frame + (1 if f != nframes - 1 else 0)
         
         # Plot each frame's trajectory in a different color
         plt.plot(
@@ -201,12 +201,14 @@ def plot1ParticleTrajectory(trajectory, nframes, D):
     
     # Add legend and axis labels
     plt.legend(loc="best", fontsize=8)
-    plt.title(f'Brownian Motion of 1 Particle with D={D}')
-    plt.xlabel('X Position')
-    plt.ylabel('Y Position')
+    plt.title(f'Brownian Motion of 1 Particle with $D={D}$ (nm)$^2$/s on 4 Frames')
+    plt.xlabel('X Position (nm)', fontsize=14)  # Increased font size
+    plt.ylabel('Y Position (nm)', fontsize=14)  # Increased font size
     plt.grid(True)
     plt.axis('equal')  # Equal scaling for x and y axes
-    
+        # Increase the tick label size
+    plt.tick_params(axis='both', which='major', labelsize=15)
+    plt.tick_params(axis='both', which='minor', labelsize=12)
     # Show the plot
     plt.tight_layout()
     plt.show()
