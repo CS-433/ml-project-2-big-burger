@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 sys.path.append('.')
-from generate_images_fast.generate_images_fast import generateImagesAndEstimateD
+from helpers import generateImagesAndEstimateDMAXD
 from skimage import metrics
 from PIL import Image
 
@@ -71,7 +71,7 @@ def generate_noisy_image(poisson_noise, gaussian_noise, nthframe=0):
     return the first image of the generated images
     """
 
-    images = generateImagesAndEstimateD(nparticles,nframes,npixel,factor_hr,nposframe,D,dt,fwhm_psf,pixelsize,flux,background,poisson_noise, gaussian_noise, silent=True)[0]
+    images = generateImagesAndEstimateDMAXD(nparticles,nframes,npixel,factor_hr,nposframe,D,dt,fwhm_psf,pixelsize,flux,background,poisson_noise, gaussian_noise, silent=True)[0]
 
     return NORMALIZE_FUNCTION(images[0, nthframe, :, :]) 
 

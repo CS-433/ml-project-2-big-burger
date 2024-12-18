@@ -615,9 +615,11 @@ def plot_image_frames16(image, title="Image Frames"):
     plt.show()
 
 
-def generateImagesAndEstimateDFAST(
+CPU_COUNT = mp.cpu_count()
+
+def generateImagesAndEstimateDMAXD(
     nparticles, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
-    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1, save_dir=None):
+    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1, save_dir=None, silent=False):
     """
     Generates the full pipeline of images and estimates the diffusion coefficient (D) for each particle.
 
@@ -646,22 +648,23 @@ def generateImagesAndEstimateDFAST(
     D_estimates = np.zeros(nparticles)
     time_range = np.arange(nframes * nposframe) * dt / nposframe
 
+    if not silent: print(f"running program on each {CPU_COUNT} cpu core of the computer")
+
+
     # Simulate Brownian motion for all particles
-    trajectories = brownian_motion(nparticles, nframes, nposframe, D, dt)
+    trajectories = _brownian_motion(nparticles, nframes, nposframe, D, dt, silent=silent)
 
     args = [(trajectories[p].copy(), nframes, npixel, factor_hr, nposframe, 
              fwhm_psf, pixelsize, flux, background, poisson_noise, gaussian_noise, 
              time_range, normalizeValue) for p in range(nparticles)]
     
-
-    cpu_count = mp.cpu_count()
-    print(f"running program on each {cpu_count} cpu core of the computer")
     # Multiprocessing
-    with mp.Pool(cpu_count) as pool:
+    with mp.Pool(CPU_COUNT) as pool:
         results = list(tqdm(
                 pool.imap(_generateImageforParticle, args),
                 total=nparticles,
-                desc="Generating images and estimating D"
+                desc="Generating images and estimating D",
+                disable=silent
                 ))    
     
     for p, (frame_noisy, D_estimate) in enumerate(results):
@@ -680,6 +683,65 @@ def generateImagesAndEstimateDFAST(
     
     return image_array, D_estimates
 
+
+def _brownian_motion(nparticles, nframes, nposframe, D, dt, startAtZero=False, silent=False):
+    """
+    Simulates the Brownian motion of particles over a specified number of frames 
+    and interframe positions.
+
+    Parameters:
+    - nparticles (int): Number of particles to simulate.
+    - nframes (int): Number of frames in the simulation.
+    - nposframe (int): Number of interframe positions to calculate per frame.
+    - D (float): Diffusion coefficient, influencing the spread of particle movement.
+    - dt (float): Time interval between frames, affects particle displacement.
+    - startAtZero (bool): If True, initializes the starting position at (0, 0).
+
+    Returns:
+    - trajectory (ndarray): Array of shape (nparticles, num_steps, 2) containing 
+                            the x, y coordinates of each particle at each time step.
+                            `num_steps` is calculated as `nframes * nposframe`.
+    """
+    num_steps = nframes * nposframe
+    positions = np.zeros(2)
+    trajectory = np.zeros((nparticles, num_steps, 2))
+    
+    # the formula for sigma might be wrong ?
+    #https://en.wikipedia.org/wiki/Mean_squared_displacement#:~:text=In%20statistical%20mechanics%2C%20the%20mean,a%20reference%20position%20over%20time.
+    #https://en.wikipedia.org/wiki/Gaussian_function
+    sigma = np.sqrt(2 * D * dt / nposframe)
+    #sigma = np.sqrt(4 * D * dt / nposframe)  # Standard deviation of step size based on D and dt
+
+    #for p in range(nparticles):
+
+    with mp.Pool(mp.cpu_count()) as pool:
+        trajectory = np.array(list(tqdm(
+                pool.imap(_generate_trajectory, [(num_steps, sigma, startAtZero)]*nparticles),
+                total=nparticles,
+                desc="Generating trajectories",
+                disable=silent
+                )))
+         
+    assert trajectory.shape == (nparticles, num_steps, 2), "Trajectory shape is incorrect"
+
+    return trajectory
+
+
+def _generate_trajectory(args):
+    (num_steps, sigma, startAtZero) = args
+    # Generate random steps in x and y directions based on normal distribution
+    dxy = np.random.randn(num_steps, 2) * sigma
+    if startAtZero:
+        dxy[0, :] = [0, 0]  # Set starting position at origin for the first step
+    # Calculate cumulative sum to get positions from step displacements
+    positions = np.cumsum(dxy, axis=0)
+
+    # if the trajectory is out of the frame, we redo the trajectory
+    # change this magic numbers to pixelsize * nbrPixels
+    if np.any(np.abs(positions) > 100 * 64): 
+        return _generate_trajectory(args)
+
+    return positions
 
 def _generateImageforParticle(arg):
     """
@@ -717,131 +779,6 @@ def _generateImageforParticle(arg):
     D_estimate = estimateDfromMSD(msd, time_range)
 
     return (frame_noisy, D_estimate)
-
-
-CPU_COUNT = mp.cpu_count()
-
-def generateImagesAndEstimateDMAXD(
-    nparticles, nframes, npixel, factor_hr, nposframe, D, dt, fwhm_psf, pixelsize,
-    flux, background, poisson_noise, gaussian_noise, normalizeValue=-1, save_dir=None):
-    """
-    Generates the full pipeline of images and estimates the diffusion coefficient (D) for each particle.
-
-    Parameters:
-    - nparticles (int): Number of particles.
-    - nframes (int): Number of frames to generate per particle.
-    - npixel (int): Number of pixels for the image (square grid).
-    - factor_hr (int): High-resolution scaling factor.
-    - nposframe (int): Number of positions within each frame.
-    - D (float): Diffusion coefficient for Brownian motion simulation.
-    - dt (float): Time interval between frames.
-    - fwhm_psf (float): Full width at half maximum for the PSF.
-    - pixelsize (float): Pixel size in nanometers.
-    - flux (float): Photon flux of the particles.
-    - background (float): Background intensity level.
-    - poisson_noise (float): Poisson noise scaling factor.
-    - gaussian_noise (float): Gaussian noise standard deviation.
-    - save_dir (str): Directory to save the images and D estimates.
-
-    Returns:
-    - image_array (ndarray): Array of shape (nparticles, nframes, npixel, npixel)
-                             containing the simulated noisy images.
-    - D_estimates (ndarray): Array of size (nparticles) with estimated diffusion coefficients.
-    """
-    image_array = np.zeros((nparticles, nframes, npixel, npixel))
-    D_estimates = np.zeros(nparticles)
-    time_range = np.arange(nframes * nposframe) * dt / nposframe
-
-    # Simulate Brownian motion for all particles
-    trajectories = _brownian_motion(nparticles, nframes, nposframe, D, dt)
-
-    args = [(trajectories[p].copy(), nframes, npixel, factor_hr, nposframe, 
-             fwhm_psf, pixelsize, flux, background, poisson_noise, gaussian_noise, 
-             time_range, normalizeValue) for p in range(nparticles)]
-    
-    print(f"running program on each {CPU_COUNT} cpu core of the computer")
-    # Multiprocessing
-    with mp.Pool(CPU_COUNT) as pool:
-        results = list(tqdm(
-                pool.imap(_generateImageforParticle, args),
-                total=nparticles,
-                desc="Generating images and estimating D"
-                ))    
-    
-    for p, (frame_noisy, D_estimate) in enumerate(results):
-        image_array[p] = frame_noisy
-        D_estimates[p] = D_estimate
-
-    if save_dir is not None:
-
-        if not path.isdir(save_dir):
-            makedirs(save_dir)
-            print(f"Directory {save_dir} didn't exist, it has now been created")
-
-        np.save(path.join(save_dir,"images.npy"), image_array)
-        np.save(path.join(save_dir,"D_estimates.npy"), D_estimates)
-        print(f"Images and D estimates saved in {save_dir}")
-    
-    return image_array, D_estimates
-
-
-def _brownian_motion(nparticles, nframes, nposframe, D, dt, startAtZero=False):
-    """
-    Simulates the Brownian motion of particles over a specified number of frames 
-    and interframe positions.
-
-    Parameters:
-    - nparticles (int): Number of particles to simulate.
-    - nframes (int): Number of frames in the simulation.
-    - nposframe (int): Number of interframe positions to calculate per frame.
-    - D (float): Diffusion coefficient, influencing the spread of particle movement.
-    - dt (float): Time interval between frames, affects particle displacement.
-    - startAtZero (bool): If True, initializes the starting position at (0, 0).
-
-    Returns:
-    - trajectory (ndarray): Array of shape (nparticles, num_steps, 2) containing 
-                            the x, y coordinates of each particle at each time step.
-                            `num_steps` is calculated as `nframes * nposframe`.
-    """
-    num_steps = nframes * nposframe
-    positions = np.zeros(2)
-    trajectory = np.zeros((nparticles, num_steps, 2))
-    
-    # the formula for sigma might be wrong ?
-    #https://en.wikipedia.org/wiki/Mean_squared_displacement#:~:text=In%20statistical%20mechanics%2C%20the%20mean,a%20reference%20position%20over%20time.
-    #https://en.wikipedia.org/wiki/Gaussian_function
-    sigma = np.sqrt(2 * D * dt / nposframe)
-    #sigma = np.sqrt(4 * D * dt / nposframe)  # Standard deviation of step size based on D and dt
-
-    #for p in range(nparticles):
-
-    with mp.Pool(mp.cpu_count()) as pool:
-        trajectory = np.array(list(tqdm(
-                pool.imap(_generate_trajectory, [(num_steps, sigma, startAtZero)]*nparticles),
-                total=nparticles,
-                desc="Generating trajectories"
-                )))
-         
-    assert trajectory.shape == (nparticles, num_steps, 2), "Trajectory shape is incorrect"
-
-    return trajectory
-
-
-def _generate_trajectory(args):
-    (num_steps, sigma, startAtZero) = args
-    # Generate random steps in x and y directions based on normal distribution
-    dxy = np.random.randn(num_steps, 2) * sigma
-    if startAtZero:
-        dxy[0, :] = [0, 0]  # Set starting position at origin for the first step
-    # Calculate cumulative sum to get positions from step displacements
-    positions = np.cumsum(dxy, axis=0)
-
-    # if the trajectory is out of the frame, we redo the trajectory
-    # TODO change this magic numbers to pixelsize * nbrPixels
-    if np.any(np.abs(positions) > 100 * 64): 
-        return _generate_trajectory(args)
-
-    return positions
 
 
 # Define a 2D Gaussian model
