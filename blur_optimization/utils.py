@@ -63,6 +63,7 @@ def plot_2_image(image, blurred, title=""):
     ax[1].imshow(blurred, cmap='gray')
     ax[1].set_title("Generated Image")
     plt.suptitle(title)
+    plt.tight_layout()
     plt.show()
 
 def generate_noisy_image(poisson_noise, gaussian_noise, nthframe=0):

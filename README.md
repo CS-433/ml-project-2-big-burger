@@ -18,6 +18,21 @@ This project was done thanks to the EPFL Center for Imaging, which gave us refer
 
 The project was divided in 3 parts: Simulations, Model Training and Real Data Prediction. The first focuses on generating images that will later be used during training. The second comprises the whole training pipeline, from creating/loading models to training and predicting on the validation data.
 
+- `blur_optimization/` contains the code used to optimize the similarity between real data and simulated data by changing the blur of the generated images
+- `Models/` contains the models architecture
+- `modelsData/` contains the data saved during training, such as weights and losses
+- `real-data/` contains the real data on which we want to predict the diffusion coefficient
+- `references/` contains the related papers and research done on this subject
+- `run_outputs/` contains the results of the real data prediction on the real data done by run.py
+- `tests/` contains various tests used to explore the data and the models
+  - `centering_images/` contains code that center the images around the particle
+  - `CoarseD/` TODO
+  - `local_optimum_fix` contains code that tries to fix the local optimum problem with a different weight initialization technique
+- `ModelTrainPipeline.ipynb` is the notebook used to train the models using the simulated data
+- `RealDataPrediction.ipynb` is the notebook used to predict the diffusion coefficient on real data
+- `helpers.py` is an improved version of code given to us that generates tajectories and images
+- `run.py` is a script that can be used to predict the diffusion coefficient on real data with easy to change parameters
+- `run_full.py` is an augmented version of run.py that also can retrain the models on the simulated data and plot the results, currently not fully working
 
 ## Simulation
 ### Parameters:
