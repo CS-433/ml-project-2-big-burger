@@ -16,8 +16,10 @@ This project was done thanks to the EPFL Center for Imaging, which gave us refer
 
 ## Project structure:
 
-The project was divided in 3 parts: Simulations, Model Training and Real Data Prediction. The first focuses on generating images that will later be used during training. The second comprises the whole training pipeline, from creating/loading models to training and predicting on the validation data.
-
+The project was divided in 3 parts: Simulations, Model Training and Real Data Prediction. 
+The first focuses on generating images that will later be used during training. 
+The second comprises the whole training pipeline, from creating/loading models to training and predicting on the validation data.
+The third is used to predict The diffusion coefficient on real-data, where the diffusion coefficient is unknown. 
 - `blur_optimization/` contains the code used to optimize the similarity between real data and simulated data by changing the blur of the generated images
 - `Models/` contains the models architecture
 - `modelsData/` contains the data saved during training, such as weights and losses
@@ -26,18 +28,19 @@ The project was divided in 3 parts: Simulations, Model Training and Real Data Pr
 - `run_outputs/` contains the results of the real data prediction on the real data done by run.py
 - `tests/` contains various tests used to explore the data and the models
   - `centering_images/` contains code that center the images around the particle
-  - `CoarseD/` TODO
+  - `CoarseD/` Contains the tests done to implement the method that computes the Trajectory-D as done in litterature, by using image centroids
   - `local_optimum_fix` contains code that tries to fix the local optimum problem with a different weight initialization technique
 - `ModelTrainPipeline.ipynb` is the notebook used to train the models using the simulated data
 - `RealDataPrediction.ipynb` is the notebook used to predict the diffusion coefficient on real data
-- `helpers.py` is an improved version of code given to us that generates tajectories and images
+- `helpers.py` contains all methods used for the simulation and trajectory-D predictions
 - `run.py` is a script that can be used to predict the diffusion coefficient on real data with easy to change parameters
 - `run_full.py` is an augmented version of run.py that also can retrain the models on the simulated data and plot the results, currently not fully working
 
 ## Simulation
 ### Parameters:
 For the simulation, multiple hyperparameters were selected to best match real data distribution. These were carefully selected using notebooks tests/image_creation_test.ipynb and test/brownian-msd.ipynb.
-Each of these parameters influences the final image, here are the most important ones with their physical explanation:  
+Each of these parameters influences the final image, here are the most important ones with their physical explanation:   
+
 nframes = 16    # Number of frames generated for each particle  
 nposframe = 10    # Number of sub-positions per frame  
 dt = 0.01        # Integration time frame in seconds (time between two frames)  
@@ -71,7 +74,7 @@ A folder blur_optimization in which we try to optimize the similarity between re
 
 ## Reproducibility
 
-To perform real data prediction on high number of files simultaneously and not need to use a jupyter notebook, we also a have a run.py and run_full.py which can be run from the terminal. They will use the specified data folder and filenames, and put the results in run_outputs. More details can be found by doing run.py -help.  
+To perform real data prediction on high number of files simultaneously and not need to use a jupyter notebook, we also a have a run.py and run_full.py which can be run from the terminal. They will use the specified data folder and filenames, and put the results in run_outputs. More details can be found by doing `python3 run.py -help`.  
 
 In order to make this project reproducible, we included a `requirements.txt` file regrouping all python libraries we used, along with their versions. To install them, it is recommended to do so in a virtual environment; to create one, `python3 -m venv venv_name` is a useful command. After activating it, type `pip install -r requirements.txt` to install the libraries.  
 If this doesn't work, we also included a `Dockerfile`, which can be used to create a Docker Image to containerize the application. It is longer to set up but should work on all computers.
